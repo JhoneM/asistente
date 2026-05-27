@@ -1,0 +1,1641 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HabitPet — Arquitectura Interactiva</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg2: #1a1d27;
+    --bg3: #242838;
+    --border: #2e3347;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+    --accent: #6366f1;
+    --accent2: #8b5cf6;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --orange: #f97316;
+    --blue: #3b82f6;
+    --sidebar: 260px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: var(--sidebar); min-width: var(--sidebar);
+    background: var(--bg2); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  }
+  .sidebar-header { padding: 24px 20px 16px; border-bottom: 1px solid var(--border); }
+  .sidebar-header h1 { font-size: 18px; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .sidebar-header p { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .nav-group { padding: 12px 12px 4px; }
+  .nav-group-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 0 8px; margin-bottom: 4px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px;
+    cursor: pointer; font-size: 13px; color: var(--muted); transition: all 0.15s;
+    border: none; background: none; width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active { background: rgba(99,102,241,0.15); color: var(--accent); font-weight: 500; }
+  .nav-item .icon { font-size: 15px; flex-shrink: 0; }
+
+  /* ── MAIN ── */
+  #main { flex: 1; overflow-y: auto; }
+  .section { display: none; padding: 32px; max-width: 1100px; margin: 0 auto; }
+  .section.active { display: block; }
+
+  /* ── HEADER ── */
+  .section-header { margin-bottom: 32px; }
+  .section-header h2 { font-size: 26px; font-weight: 700; margin-bottom: 8px; }
+  .section-header p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-right: 6px; }
+  .badge-blue { background: rgba(59,130,246,0.2); color: #60a5fa; }
+  .badge-purple { background: rgba(99,102,241,0.2); color: #a5b4fc; }
+  .badge-green { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+  .badge-orange { background: rgba(249,115,22,0.2); color: #fb923c; }
+
+  /* ── CARDS ── */
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+  .card-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .card-desc { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+  .card-rule { background: var(--bg3); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; padding: 12px 16px; margin-top: 16px; font-size: 13px; color: var(--muted); }
+  .card-rule strong { color: var(--text); }
+
+  /* ── MERMAID ── */
+  .diagram-wrap { background: var(--bg3); border-radius: 10px; padding: 20px; overflow: auto; }
+  .diagram-wrap .mermaid { display: flex; justify-content: center; }
+  .mermaid svg { max-width: 100%; height: auto; }
+
+  /* ── GRID ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* ── SIMULATOR ── */
+  .sim-container { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 28px; }
+  .pet-display { text-align: center; margin: 24px 0; }
+  .pet-emoji { font-size: 80px; transition: all 0.4s ease; display: block; line-height: 1; }
+  .pet-name { font-size: 16px; font-weight: 600; margin-top: 12px; }
+  .pet-message { font-size: 13px; color: var(--muted); margin-top: 6px; max-width: 300px; margin-left: auto; margin-right: auto; }
+  .wellness-bar-wrap { margin: 20px 0; }
+  .wellness-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .wellness-bar { height: 12px; border-radius: 6px; background: var(--bg3); overflow: hidden; }
+  .wellness-fill { height: 100%; border-radius: 6px; transition: all 0.3s ease; }
+  .slider-wrap { margin: 16px 0; }
+  .slider-wrap label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 8px; }
+  input[type=range] { width: 100%; accent-color: var(--accent); cursor: pointer; height: 6px; }
+  .state-badge {
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 20px;
+    border-radius: 30px; font-size: 14px; font-weight: 700; margin-top: 16px;
+    transition: all 0.3s ease; border: 2px solid;
+  }
+  .xp-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+  .xp-input-group label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 6px; }
+  .xp-input-group input {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; color: var(--text); font-size: 14px; outline: none;
+  }
+  .xp-input-group input:focus { border-color: var(--accent); }
+  .xp-result { background: var(--bg3); border-radius: 10px; padding: 16px; margin-top: 16px; font-size: 13px; }
+  .xp-result .row { display: flex; justify-content: space-between; padding: 4px 0; }
+  .xp-result .row.total { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 12px; font-weight: 600; font-size: 14px; }
+
+  /* ── LAYERS DIAGRAM ── */
+  .layers-visual { display: flex; flex-direction: column; gap: 3px; margin: 20px 0; }
+  .layer-box {
+    border-radius: 10px; padding: 16px 20px; cursor: pointer;
+    transition: all 0.2s ease; border: 2px solid transparent;
+    display: flex; align-items: flex-start; gap: 16px;
+  }
+  .layer-box:hover { transform: translateX(4px); border-color: currentColor; }
+  .layer-box.selected { transform: translateX(4px); border-color: currentColor; }
+  .layer-icon { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
+  .layer-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .layer-info p { font-size: 12px; opacity: 0.75; line-height: 1.5; }
+  .layer-detail { background: var(--bg3); border-radius: 10px; padding: 16px; margin-top: 12px; font-size: 13px; line-height: 1.7; display: none; }
+  .layer-detail.visible { display: block; }
+  .layer-detail ul { padding-left: 20px; }
+  .layer-detail li { margin-bottom: 4px; }
+
+  /* ── PATTERNS GRID ── */
+  .patterns-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .pattern-chip {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 16px; cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; gap: 10px; font-size: 13px;
+  }
+  .pattern-chip:hover { border-color: var(--accent); background: rgba(99,102,241,0.08); }
+  .pattern-chip.active { border-color: var(--accent); background: rgba(99,102,241,0.15); color: var(--accent); }
+  .pattern-content { display: none; }
+  .pattern-content.active { display: block; }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: var(--bg3); text-align: left; padding: 10px 14px; font-weight: 600; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { padding: 10px 14px; border-top: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  code { background: var(--bg3); padding: 2px 6px; border-radius: 4px; font-size: 12px; font-family: 'Cascadia Code', 'Fira Code', monospace; color: #a5b4fc; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── PRINT ── */
+  @media print {
+    #sidebar { display: none; }
+    .section { display: block !important; page-break-after: always; }
+  }
+
+  .tag { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+  .tag-behavioral { background: rgba(139,92,246,0.2); color: #c4b5fd; }
+  .tag-creational { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+  .tag-structural { background: rgba(59,130,246,0.2); color: #93c5fd; }
+  .tag-architectural { background: rgba(249,115,22,0.2); color: #fdba74; }
+
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════ -->
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <h1>HabitPet</h1>
+    <p>Arquitectura Interactiva · UADE 2026</p>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Arquitectura</div>
+    <button class="nav-item active" onclick="show('c4')">
+      <span class="icon">🗺️</span> Diagramas C4
+    </button>
+    <button class="nav-item" onclick="show('capas')">
+      <span class="icon">🏗️</span> Capas del Sistema
+    </button>
+    <button class="nav-item" onclick="show('flujos')">
+      <span class="icon">🔄</span> Flujos de Datos
+    </button>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Dominio</div>
+    <button class="nav-item" onclick="show('dominio')">
+      <span class="icon">📦</span> Modelo de Dominio
+    </button>
+    <button class="nav-item" onclick="show('er')">
+      <span class="icon">🗄️</span> Diagrama ER
+    </button>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Diseño</div>
+    <button class="nav-item" onclick="show('patrones')">
+      <span class="icon">🎨</span> Patrones GoF
+    </button>
+    <button class="nav-item" onclick="show('solid')">
+      <span class="icon">🔩</span> SOLID & GRASP
+    </button>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Interactivo</div>
+    <button class="nav-item" onclick="show('sim')">
+      <span class="icon">🐾</span> Simulador de Mascota
+    </button>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     MAIN CONTENT
+══════════════════════════════════════════ -->
+<main id="main">
+
+<!-- ─── C4 DIAGRAMS ─── -->
+<section id="c4" class="section active">
+  <div class="section-header">
+    <h2>Diagramas C4</h2>
+    <p>El modelo C4 describe la arquitectura en cuatro niveles de abstracción. Cada nivel amplía el detalle del anterior.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📍 Nivel 1 — Contexto del Sistema</div>
+    <div class="card-desc">Vista de más alto nivel. Muestra el sistema HabitPet como una caja negra y sus relaciones con actores externos. Responde: ¿quién usa el sistema y con qué otros sistemas interactúa?</div>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    U["👤 Usuario\nEstudiante / Profesional\nUsa HabitPet para\nadoptar hábitos saludables"]
+
+    subgraph sys["Sistema HabitPet"]
+        WEB["🌐 Aplicación Web\nReact + TypeScript\nSPA accesible desde\ncualquier navegador"]
+        API["⚙️ Backend API\nSpring Boot + Java 21\nLógica de negocio\ny persistencia"]
+        DB[("🗄️ Base de Datos\nPostgreSQL\nUsuarios, hábitos,\nregistros, mascota")]
+    end
+
+    U -->|"HTTPS / WSS"| WEB
+    WEB -->|"REST API + WebSocket"| API
+    API -->|"SQL via JPA/Hibernate"| DB
+
+    style sys fill:#1a1d27,stroke:#6366f1,stroke-width:2px
+    style U fill:#242838,stroke:#6366f1,color:#e2e8f0
+    style WEB fill:#242838,stroke:#3b82f6,color:#e2e8f0
+    style API fill:#242838,stroke:#8b5cf6,color:#e2e8f0
+    style DB fill:#242838,stroke:#10b981,color:#e2e8f0
+      </div>
+    </div>
+    <div class="card-rule"><strong>Decisión:</strong> SPA separada del backend (no SSR) para facilitar el desarrollo paralelo y soportar WebSocket en el cliente de forma natural.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📦 Nivel 2 — Contenedores</div>
+    <div class="card-desc">Amplía el sistema mostrando las aplicaciones y almacenes de datos que lo componen. Muestra cómo se comunican entre sí.</div>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    U["👤 Usuario"]
+
+    subgraph FE["Frontend React SPA"]
+        direction TB
+        P1["Auth Pages\nLogin / Registro"]
+        P2["Dashboard\nMascota + Estado"]
+        P3["Habit Manager\nCRUD de hábitos"]
+        P4["Statistics\nEstadísticas semanales"]
+        ST["Zustand Store\nEstado global"]
+        WC["WebSocket Client\nSockJS+STOMP"]
+    end
+
+    subgraph BE["Backend Spring Boot"]
+        direction TB
+        M1["AuthModule\nJWT + Guards"]
+        M2["HabitModule\nCRUD + validaciones"]
+        M3["RecordModule\nCheck-in diario"]
+        M4["PetModule\nEstado + XP + Niveles"]
+        M5["StatsModule\nEstadísticas"]
+        GW["WebSocketGateway
+Spring STOMP"]
+        MN["NotificationModule\nAlertas in-app"]
+    end
+
+    DB[("PostgreSQL
+JPA/Hibernate")]
+
+    U --> P1 & P2 & P3 & P4
+    P1 & P2 & P3 & P4 --- ST
+    ST -->|"axios REST"| M1 & M2 & M3 & M4 & M5
+    WC <-->|"WebSocket"| GW
+    M1 & M2 & M3 & M4 & M5 --> DB
+    M3 --> M4
+    M4 --> GW & MN
+
+    style FE fill:#1a2035,stroke:#3b82f6,stroke-width:2px
+    style BE fill:#1d1a35,stroke:#8b5cf6,stroke-width:2px
+    style DB fill:#1a2a1a,stroke:#10b981
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔬 Nivel 3 — Componentes del Backend</div>
+    <div class="card-desc">Detalla la estructura interna del backend Spring Boot. Muestra las cuatro capas de la arquitectura y las dependencias entre componentes.</div>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph P["Capa de Presentación — Controllers & Gateway"]
+        direction LR
+        CA["AuthController"]
+        CH["HabitController"]
+        CR["RecordController"]
+        CP["PetController"]
+        CS["StatsController"]
+        GW["WebSocketGateway"]
+    end
+
+    subgraph A["Capa de Aplicación — Services"]
+        direction LR
+        SA["AuthService"]
+        SH["HabitService"]
+        SR["RecordService"]
+        SP["PetService"]
+        SS["StatsService"]
+        SN["NotificationService"]
+    end
+
+    subgraph D["Capa de Dominio — Entidades & Patrones"]
+        direction LR
+        EU["User Entity"]
+        EH["Habit Entity"]
+        ER["CompletionRecord"]
+        EP["Pet Entity"]
+        VO["WellnessScore\nValue Object"]
+        WC["WellnessCalculator\nStrategy Interface"]
+        WS["WeightedAverage\nStrategy"]
+        PS["PetState\nState Pattern"]
+    end
+
+    subgraph I["Capa de Infraestructura — Repositories & Services"]
+        direction LR
+        RU["UserRepository\nSpring Data JPA"]
+        RH["HabitRepository\nSpring Data JPA"]
+        RR["RecordRepository\nSpring Data JPA"]
+        RP["PetRepository\nSpring Data JPA"]
+        JWT["JwtFilter
+Spring Security"]
+        HASH["HashService\nbcrypt"]
+    end
+
+    CA --> SA
+    CH --> SH
+    CR --> SR
+    CP --> SP
+    CS --> SS
+    GW --> SN
+
+    SA --> RU & JWT & HASH
+    SH --> RH & EH
+    SR --> RR & SP
+    SP --> RP & WC & PS & VO
+    SS --> RR & RH
+    SN --> GW
+    WS -.->|implementa| WC
+
+    style P fill:#1e2535,stroke:#3b82f6,stroke-width:2px
+    style A fill:#1e1a35,stroke:#8b5cf6,stroke-width:2px
+    style D fill:#1a2a1a,stroke:#10b981,stroke-width:2px
+    style I fill:#2a1a1a,stroke:#f59e0b,stroke-width:2px
+      </div>
+    </div>
+    <div class="card-rule"><strong>Regla clave:</strong> Las dependencias siempre apuntan hacia abajo (Presentación → Aplicación → Dominio ← Infraestructura). La capa de Dominio no conoce ningún framework.</div>
+  </div>
+</section>
+
+<!-- ─── CAPAS ─── -->
+<section id="capas" class="section">
+  <div class="section-header">
+    <h2>Capas del Sistema</h2>
+    <p>Explorá cada capa haciendo click para ver sus responsabilidades y reglas. La arquitectura de capas garantiza que cada componente tiene una única razón de cambio (SRP).</p>
+  </div>
+
+  <div class="card">
+    <div class="layers-visual">
+      <div class="layer-box" style="background:rgba(59,130,246,0.12);color:#60a5fa" onclick="toggleLayer('presentation')">
+        <div class="layer-icon">🖥️</div>
+        <div class="layer-info">
+          <h4>Capa de Presentación</h4>
+          <p>Controllers HTTP + WebSocket Gateway. Valida el formato de los datos de entrada. No contiene lógica de negocio.</p>
+        </div>
+      </div>
+      <div id="detail-presentation" class="layer-detail">
+        <strong>Componentes:</strong> AuthController, HabitController, RecordController, PetController, StatsController, WebSocketGateway<br><br>
+        <strong>Reglas:</strong>
+        <ul>
+          <li>Los Controllers solo delegan — no calculan ni deciden</li>
+          <li>Validación de formato con <code>@Valid (Jakarta Bean Validation)</code> (tipos, longitud, regex)</li>
+          <li>Transformación de respuesta con DTOs (<code>ResponseDto.from(domainEntity)</code>)</li>
+          <li>Autenticación con Guards (<code>@UseGuards(JwtAuthGuard)</code>)</li>
+        </ul>
+        <br><strong>Por qué separar:</strong> Si un Controller contiene lógica de negocio, un cambio en las reglas del dominio obliga a modificar la capa HTTP — dos razones de cambio en la misma clase (violación de SRP).
+      </div>
+
+      <div style="text-align:center;font-size:20px;color:#4b5563">↓</div>
+
+      <div class="layer-box" style="background:rgba(139,92,246,0.12);color:#c4b5fd" onclick="toggleLayer('application')">
+        <div class="layer-icon">⚙️</div>
+        <div class="layer-info">
+          <h4>Capa de Aplicación</h4>
+          <p>Services que orquestan los casos de uso. Coordinan entidades de dominio, repositorios y servicios externos.</p>
+        </div>
+      </div>
+      <div id="detail-application" class="layer-detail">
+        <strong>Componentes:</strong> AuthService, HabitService, RecordService, PetService, StatsService, NotificationService<br><br>
+        <strong>Reglas:</strong>
+        <ul>
+          <li>Los Services conocen el dominio pero NO conocen JPA ni SQL directamente</li>
+          <li>Dependen de interfaces de repositorio, no de implementaciones concretas (DIP)</li>
+          <li>Orquestación de transacciones de negocio (ej: check-in → recalcular mascota → emitir evento)</li>
+        </ul>
+        <br><strong>Por qué separar:</strong> Si los Services dependen de JPA/Hibernate directamente, un cambio de ORM requiere modificar la lógica de negocio. Al depender de abstracciones, la infraestructura puede cambiar sin afectar la lógica.
+      </div>
+
+      <div style="text-align:center;font-size:20px;color:#4b5563">↓</div>
+
+      <div class="layer-box" style="background:rgba(16,185,129,0.12);color:#6ee7b7" onclick="toggleLayer('domain')">
+        <div class="layer-icon">💎</div>
+        <div class="layer-info">
+          <h4>Capa de Dominio</h4>
+          <p>Entidades, Value Objects y reglas de negocio. Independiente de cualquier framework o tecnología.</p>
+        </div>
+      </div>
+      <div id="detail-domain" class="layer-detail">
+        <strong>Componentes:</strong> User, Habit, CompletionRecord, Pet (entidades) · WellnessScore (Value Object) · WellnessCalculator, PetStateHandler (abstracciones de dominio)<br><br>
+        <strong>Reglas:</strong>
+        <ul>
+          <li>Las entidades <strong>pueden</strong> tener anotaciones JPA (<code>@Entity</code>, <code>@Column</code>) — son metadatos inertes sin contexto JPA</li>
+          <li>Lo que <strong>nunca</strong> debe haber: llamadas a repositorios o servicios dentro de métodos de entidad</li>
+          <li>Los Value Objects son inmutables (WellnessScore como Java record)</li>
+          <li>Las reglas de negocio viven en métodos de entidad: <code>validate()</code>, <code>shouldCompleteOn()</code>, <code>addXP()</code></li>
+        </ul>
+        <br><strong>Por qué separar:</strong> El dominio es el conocimiento central del sistema. Si mezcla infraestructura, se vuelve frágil ante cambios tecnológicos y no puede testearse sin base de datos.
+      </div>
+
+      <div style="text-align:center;font-size:20px;color:#4b5563">↓</div>
+
+      <div class="layer-box" style="background:rgba(249,115,22,0.12);color:#fdba74" onclick="toggleLayer('infra')">
+        <div class="layer-icon">🏭</div>
+        <div class="layer-info">
+          <h4>Capa de Infraestructura</h4>
+          <p>Implementaciones concretas: repositorios JPA, BCrypt, Spring STOMP.</p>
+        </div>
+      </div>
+      <div id="detail-infra" class="layer-detail">
+        <strong>Componentes:</strong> JpaPetRepository, JpaHabitRepository, JpaUserRepository, JpaRecordRepository · JwtFilter (Spring Security) · HashService (bcrypt)<br><br>
+        <strong>Reglas:</strong>
+        <ul>
+          <li>Implementa las interfaces definidas en las capas superiores (DIP)</li>
+          <li>Contiene el código específico de JPA/Hibernate, BCrypt (Spring Security), STOMP server</li>
+          <li>Los repositorios mapean entre entidades de dominio y modelos de JPA (<code>toDomain()</code>, <code>toPersistence()</code>)</li>
+        </ul>
+        <br><strong>Por qué separar:</strong> Si se cambia de PostgreSQL a otra BD, solo se crea una nueva implementación de repositorio. La lógica de negocio no cambia.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 Regla de Dependencias</div>
+    <div class="card-desc">Las flechas de dependencia solo pueden apuntar hacia las capas internas. La capa de Dominio no puede depender de ninguna otra capa.</div>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    P["🖥️ Presentación"] -->|"puede depender de"| A["⚙️ Aplicación"]
+    A -->|"puede depender de"| D["💎 Dominio"]
+    I["🏭 Infraestructura"] -->|"implementa abstracciones de"| D
+    P -.->|"NO puede"| I
+    A -.->|"NO puede"| I
+
+    style D fill:#1a2a1a,stroke:#10b981,stroke-width:3px
+    style P fill:#1e2535,stroke:#3b82f6
+    style A fill:#1e1a35,stroke:#8b5cf6
+    style I fill:#2a1a1a,stroke:#f59e0b
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FLUJOS ─── -->
+<section id="flujos" class="section">
+  <div class="section-header">
+    <h2>Flujos de Datos</h2>
+    <p>Diagramas de secuencia de los flujos principales del sistema.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔄 Flujo 1: Check-in de Hábito</div>
+    <div class="card-desc">El flujo más importante del sistema. Involucra 7 componentes y activa el Observer Pattern para notificar el cambio de estado de la mascota en tiempo real.</div>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant FE as React Frontend
+    participant WS as WebSocket Client
+    participant RC as RecordController
+    participant RS as RecordService
+    participant PS as PetService
+    participant CALC as WellnessCalculator
+    participant DB as PostgreSQL
+    participant GW as WebSocketGateway
+
+    FE->>RC: POST /records/checkin { habitId, date }
+    RC->>RS: checkIn(userId, habitId, date)
+    RS->>DB: Verificar no existe registro hoy
+    RS->>DB: Crear CompletionRecord
+    Note over RS: Observer Pattern: emite record.completed
+    RS->>PS: recalcularEstado(userId)
+    PS->>DB: Obtener registros últimos 7 días
+    PS->>CALC: calculate(registros, hábitos, 7 días)
+    Note over CALC: Strategy Pattern: promedio ponderado exponencial
+    CALC-->>PS: WellnessScore (0-100)
+    PS->>PS: toState() → PetState enum
+    PS->>PS: addXP(amount) → LevelUpResult
+    PS->>DB: Actualizar Pet { state, xp, level }
+    PS->>GW: emitPetStateChanged(userId, pet)
+    GW->>WS: broadcast → user room
+    WS->>FE: Actualizar UI mascota (< 500ms)
+    RC-->>FE: 201 Created { record }
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔐 Flujo 2: Autenticación con JWT</div>
+    <div class="card-desc">El sistema usa dos tokens: access token (15 min, en memoria) y refresh token (7 días, en cookie HttpOnly). El cliente nunca almacena el access token en localStorage.</div>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant FE as React Frontend
+    participant AC as AuthController
+    participant AS as AuthService
+    participant DB as PostgreSQL
+    participant JWT as JwtService
+
+    FE->>AC: POST /auth/login { email, password }
+    AC->>AS: login(email, password)
+    AS->>DB: findByEmail(email)
+    DB-->>AS: User { hashedPassword, ... }
+    AS->>AS: passwordEncoder.matches(password, hash)
+    Note over AS: BCryptPasswordEncoder strength 10
+    AS->>JWT: sign({ sub: userId }) → accessToken (15min)
+    AS->>JWT: sign({ sub: userId }) → refreshToken (7 días)
+    AS->>DB: Guardar hash del refreshToken
+    AS-->>AC: { accessToken, refreshToken, user }
+    AC-->>FE: 200 OK (refreshToken en cookie HttpOnly)
+    Note over FE: accessToken en Zustand (memoria)<br/>refreshToken en cookie HttpOnly<br/>No se usa localStorage
+      </div>
+    </div>
+    <div class="card-rule"><strong>Por qué cookie HttpOnly:</strong> El refreshToken en localStorage es accesible desde JavaScript y vulnerable a XSS. Una cookie HttpOnly no puede ser leída por scripts del navegador.</div>
+  </div>
+</section>
+
+<!-- ─── DOMINIO ─── -->
+<section id="dominio" class="section">
+  <div class="section-header">
+    <h2>Modelo de Dominio — Diagrama de Clases</h2>
+    <p>Las entidades y sus relaciones, organizadas según principios de Domain-Driven Design.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🧬 Diagrama de Clases del Dominio</div>
+    <div class="card-desc">Las entidades del dominio son independientes de JPA y Spring Boot. Los Value Objects (WellnessScore) son inmutables.</div>
+
+    <style>
+      .uml-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+      @media (max-width: 800px) { .uml-grid { grid-template-columns: 1fr 1fr; } }
+      .uml-box { border-radius: 8px; overflow: hidden; font-size: 12px; font-family: 'Cascadia Code','Fira Code',monospace; }
+      .uml-name { padding: 8px 12px; font-weight: 700; font-size: 13px; text-align: center; letter-spacing: 0.03em; }
+      .uml-section { padding: 8px 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+      .uml-member { padding: 2px 0; color: #cbd5e1; white-space: nowrap; }
+      .uml-member.method { color: #93c5fd; }
+      .uml-member.pub::before { content: '+ '; color: #6ee7b7; }
+      .uml-member.priv::before { content: '- '; color: #fca5a5; }
+      .uml-stereotype { font-size: 10px; font-style: italic; opacity: 0.7; text-align: center; padding: 4px 12px 0; }
+
+      .uml-entity  { background: #1e2535; border: 1px solid #3b82f6; }
+      .uml-entity .uml-name { background: #1d3a6e; color: #93c5fd; }
+      .uml-iface   { background: #1e1a35; border: 1px solid #8b5cf6; }
+      .uml-iface .uml-name { background: #2d1a5e; color: #c4b5fd; }
+      .uml-enum    { background: #1a2a1a; border: 1px solid #10b981; }
+      .uml-enum .uml-name { background: #143820; color: #6ee7b7; }
+      .uml-vo      { background: #2a1e14; border: 1px solid #f59e0b; }
+      .uml-vo .uml-name { background: #3d2a0a; color: #fbbf24; }
+
+      .uml-relations { background: var(--bg3); border-radius: 10px; padding: 16px 20px; }
+      .uml-relations h4 { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+      .uml-rel-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+      .uml-rel-row:last-child { border-bottom: none; }
+      .uml-rel-from { color: #93c5fd; font-weight: 600; min-width: 160px; font-family: monospace; }
+      .uml-rel-arrow { color: var(--muted); font-size: 16px; flex-shrink: 0; }
+      .uml-rel-to { color: #c4b5fd; font-weight: 600; font-family: monospace; min-width: 160px; }
+      .uml-rel-label { color: var(--muted); font-size: 12px; font-style: italic; }
+      .uml-rel-mult { color: #6ee7b7; font-size: 11px; font-family: monospace; min-width: 40px; }
+    </style>
+
+    <div class="uml-grid">
+      <!-- User -->
+      <div class="uml-box uml-entity">
+        <div class="uml-name">User</div>
+        <div class="uml-section">
+          <div class="uml-member pub">String id</div>
+          <div class="uml-member pub">String email</div>
+          <div class="uml-member pub">String displayName</div>
+          <div class="uml-member pub">String timezone</div>
+        </div>
+        <div class="uml-section">
+          <div class="uml-member pub method">isValidEmail() : boolean</div>
+        </div>
+      </div>
+
+      <!-- Habit -->
+      <div class="uml-box uml-entity">
+        <div class="uml-name">Habit</div>
+        <div class="uml-section">
+          <div class="uml-member pub">String id</div>
+          <div class="uml-member pub">String name</div>
+          <div class="uml-member pub">HabitCategory category</div>
+          <div class="uml-member pub">int weeklyFrequency</div>
+          <div class="uml-member pub">boolean isActive</div>
+        </div>
+        <div class="uml-section">
+          <div class="uml-member pub method">validate() : void</div>
+          <div class="uml-member pub method">shouldCompleteOn(int) : boolean</div>
+          <div class="uml-member pub method">getXpReward() : int</div>
+        </div>
+      </div>
+
+      <!-- CompletionRecord -->
+      <div class="uml-box uml-entity">
+        <div class="uml-name">CompletionRecord</div>
+        <div class="uml-section">
+          <div class="uml-member pub">String id</div>
+          <div class="uml-member pub">String userId</div>
+          <div class="uml-member pub">LocalDate date</div>
+          <div class="uml-member pub">LocalDateTime createdAt</div>
+        </div>
+        <div class="uml-section">
+          <div class="uml-member pub method">isForDate(LocalDate) : boolean</div>
+        </div>
+      </div>
+
+      <!-- Pet -->
+      <div class="uml-box uml-entity">
+        <div class="uml-name">Pet</div>
+        <div class="uml-section">
+          <div class="uml-member pub">String id</div>
+          <div class="uml-member pub">PetState state</div>
+          <div class="uml-member pub">int xp</div>
+          <div class="uml-member pub">int level</div>
+          <div class="uml-member pub">LocalDateTime lastUpdated</div>
+        </div>
+        <div class="uml-section">
+          <div class="uml-member pub method">addXP(int) : Pet</div>
+          <div class="uml-member pub method">updateState(PetState) : Pet</div>
+          <div class="uml-member pub method">getMessage() : String</div>
+          <div class="uml-member pub method">shouldAlert() : boolean</div>
+        </div>
+      </div>
+
+      <!-- WellnessScore -->
+      <div class="uml-box uml-vo">
+        <div class="uml-stereotype">&laquo;value object&raquo;</div>
+        <div class="uml-name">WellnessScore</div>
+        <div class="uml-section">
+          <div class="uml-member pub">double value</div>
+        </div>
+        <div class="uml-section">
+          <div class="uml-member pub method">of(double) : WellnessScore</div>
+          <div class="uml-member pub method">toState() : PetState</div>
+          <div class="uml-member pub method">equals(Object) : boolean</div>
+        </div>
+      </div>
+
+      <!-- WellnessCalculator -->
+      <div class="uml-box uml-iface">
+        <div class="uml-stereotype">&laquo;interface&raquo;</div>
+        <div class="uml-name">WellnessCalculator</div>
+        <div class="uml-section">
+          <div class="uml-member pub method">calculate() : WellnessScore</div>
+        </div>
+      </div>
+
+      <!-- HabitCategory -->
+      <div class="uml-box uml-enum">
+        <div class="uml-stereotype">&laquo;enumeration&raquo;</div>
+        <div class="uml-name">HabitCategory</div>
+        <div class="uml-section">
+          <div class="uml-member">HEALTH</div>
+          <div class="uml-member">STUDY</div>
+          <div class="uml-member">SPORT</div>
+          <div class="uml-member">WELLNESS</div>
+          <div class="uml-member">NUTRITION</div>
+        </div>
+      </div>
+
+      <!-- PetState -->
+      <div class="uml-box uml-enum">
+        <div class="uml-stereotype">&laquo;enumeration&raquo;</div>
+        <div class="uml-name">PetState</div>
+        <div class="uml-section">
+          <div class="uml-member">CRITICAL</div>
+          <div class="uml-member">POOR</div>
+          <div class="uml-member">NEUTRAL</div>
+          <div class="uml-member">GOOD</div>
+          <div class="uml-member">EXCELLENT</div>
+        </div>
+      </div>
+
+      <!-- WeightedAverageStrategy -->
+      <div class="uml-box uml-entity">
+        <div class="uml-name">WeightedAverageStrategy</div>
+        <div class="uml-section">
+          <div class="uml-member pub method">calculate() : WellnessScore</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Relaciones -->
+    <div class="uml-relations">
+      <h4>Relaciones</h4>
+      <div class="uml-rel-row">
+        <span class="uml-rel-from">User</span>
+        <span class="uml-rel-arrow">─────────►</span>
+        <span class="uml-rel-mult">1..*</span>
+        <span class="uml-rel-to">Habit</span>
+        <span class="uml-rel-label">tiene (asociación)</span>
+      </div>
+      <div class="uml-rel-row">
+        <span class="uml-rel-from">User</span>
+        <span class="uml-rel-arrow">─────────►</span>
+        <span class="uml-rel-mult">1</span>
+        <span class="uml-rel-to">Pet</span>
+        <span class="uml-rel-label">posee (composición 1-1)</span>
+      </div>
+      <div class="uml-rel-row">
+        <span class="uml-rel-from">Habit</span>
+        <span class="uml-rel-arrow">─────────►</span>
+        <span class="uml-rel-mult">0..*</span>
+        <span class="uml-rel-to">CompletionRecord</span>
+        <span class="uml-rel-label">genera (composición)</span>
+      </div>
+      <div class="uml-rel-row">
+        <span class="uml-rel-from">Pet</span>
+        <span class="uml-rel-arrow">- - - - - ►</span>
+        <span class="uml-rel-mult"></span>
+        <span class="uml-rel-to">WellnessScore</span>
+        <span class="uml-rel-label">usa (dependencia)</span>
+      </div>
+      <div class="uml-rel-row">
+        <span class="uml-rel-from">WellnessScore</span>
+        <span class="uml-rel-arrow">- - - - - ►</span>
+        <span class="uml-rel-mult"></span>
+        <span class="uml-rel-to">PetState</span>
+        <span class="uml-rel-label">determina (dependencia)</span>
+      </div>
+      <div class="uml-rel-row">
+        <span class="uml-rel-from">WeightedAverageStrategy</span>
+        <span class="uml-rel-arrow">- - - - -▷</span>
+        <span class="uml-rel-mult"></span>
+        <span class="uml-rel-to">WellnessCalculator</span>
+        <span class="uml-rel-label">implementa (realización)</span>
+      </div>
+      <div class="uml-rel-row">
+        <span class="uml-rel-from">Habit</span>
+        <span class="uml-rel-arrow">─────────►</span>
+        <span class="uml-rel-mult"></span>
+        <span class="uml-rel-to">HabitCategory</span>
+        <span class="uml-rel-label">categoría (asociación)</span>
+      </div>
+      <div class="uml-rel-row">
+        <span class="uml-rel-from">Pet</span>
+        <span class="uml-rel-arrow">─────────►</span>
+        <span class="uml-rel-mult"></span>
+        <span class="uml-rel-to">PetState</span>
+        <span class="uml-rel-label">estado actual (asociación)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📐 Value Object: WellnessScore</div>
+    <div class="card-desc">Un Value Object se define por sus atributos (no por identidad) y es inmutable. WellnessScore encapsula el cálculo de bienestar y su mapeo a PetState.</div>
+    <table>
+      <thead><tr><th>Propiedad</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><code>value: float</code></td><td>Bienestar de 0 a 100. Calculado como promedio ponderado exponencial de los últimos 7 días</td></tr>
+        <tr><td><code>toState(): PetState</code></td><td>Mapea el valor numérico al estado semántico de la mascota (CRITICAL, POOR, NEUTRAL, GOOD, EXCELLENT)</td></tr>
+        <tr><td><code>equals(other)</code></td><td>Igualdad por valor, no por referencia — dos WellnessScore(85) son equivalentes</td></tr>
+      </tbody>
+    </table>
+    <br>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    V0["WellnessScore\n0 – 20"] -->|"toState()"| S1["CRITICAL\n😢"]
+    V1["WellnessScore\n21 – 40"] -->|"toState()"| S2["POOR\n😕"]
+    V2["WellnessScore\n41 – 60"] -->|"toState()"| S3["NEUTRAL\n😐"]
+    V3["WellnessScore\n61 – 80"] -->|"toState()"| S4["GOOD\n😊"]
+    V4["WellnessScore\n81 – 100"] -->|"toState()"| S5["EXCELLENT\n🌟"]
+
+    style S1 fill:#2a1a1a,stroke:#ef4444,color:#fca5a5
+    style S2 fill:#2a1e14,stroke:#f97316,color:#fdba74
+    style S3 fill:#1e2020,stroke:#6b7280,color:#d1d5db
+    style S4 fill:#1a2a1a,stroke:#10b981,color:#6ee7b7
+    style S5 fill:#1a1a2a,stroke:#8b5cf6,color:#c4b5fd
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── ER ─── -->
+<section id="er" class="section">
+  <div class="section-header">
+    <h2>Diagrama Entidad-Relación</h2>
+    <p>Esquema relacional de PostgreSQL. Las restricciones se refuerzan a nivel de base de datos, no solo en la aplicación.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🗄️ Diagrama ER — HabitPet DB</div>
+    <div class="card-desc">El modelo es inherentemente relacional. La restricción <code>UNIQUE(habitId, date)</code> en completion_records garantiza que no puede haber dos check-ins del mismo hábito en el mismo día, independientemente de la lógica de la aplicación.</div>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+erDiagram
+    USER {
+        string id PK
+        string email UK
+        string hashedPassword
+        string displayName
+        string timezone
+        datetime createdAt
+        datetime updatedAt
+    }
+    HABIT {
+        string id PK
+        string userId FK
+        string name
+        string category
+        int weeklyFrequency
+        boolean isActive
+        datetime createdAt
+    }
+    COMPLETION_RECORD {
+        string id PK
+        string habitId FK
+        string userId FK
+        date date
+        datetime createdAt
+    }
+    PET {
+        string id PK
+        string userId FK
+        string state
+        int xp
+        int level
+        datetime lastUpdated
+    }
+    NOTIFICATION {
+        string id PK
+        string userId FK
+        string type
+        string message
+        boolean isRead
+        datetime createdAt
+    }
+    REFRESH_TOKEN {
+        string id PK
+        string userId FK
+        string tokenHash
+        datetime expiresAt
+        boolean isRevoked
+    }
+
+    USER ||--o{ HABIT : "tiene"
+    USER ||--|| PET : "posee"
+    USER ||--o{ NOTIFICATION : "recibe"
+    USER ||--o{ REFRESH_TOKEN : "tiene"
+    HABIT ||--o{ COMPLETION_RECORD : "genera"
+    USER ||--o{ COMPLETION_RECORD : "realiza"
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 Índices Clave de PostgreSQL</div>
+    <div class="card-desc">Los índices están diseñados para las queries más frecuentes del sistema.</div>
+    <table>
+      <thead><tr><th>Tabla</th><th>Índice</th><th>Query que optimiza</th></tr></thead>
+      <tbody>
+        <tr><td><code>users</code></td><td><code>UNIQUE(email)</code></td><td>Login: buscar usuario por email</td></tr>
+        <tr><td><code>habits</code></td><td><code>INDEX(userId, isActive)</code></td><td>Listar hábitos activos del usuario</td></tr>
+        <tr><td><code>completion_records</code></td><td><code>UNIQUE(habitId, date)</code></td><td>Validar que no existe check-in duplicado</td></tr>
+        <tr><td><code>completion_records</code></td><td><code>INDEX(userId, date)</code></td><td>Cálculo de bienestar: registros de los últimos 7 días</td></tr>
+        <tr><td><code>notifications</code></td><td><code>INDEX(userId, isRead)</code></td><td>Notificaciones pendientes del usuario</td></tr>
+        <tr><td><code>pets</code></td><td><code>UNIQUE(userId)</code></td><td>Relación 1-1 con User</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─── PATRONES ─── -->
+<section id="patrones" class="section">
+  <div class="section-header">
+    <h2>Patrones de Diseño GoF</h2>
+    <p>7 patrones aplicados con ejemplos concretos del proyecto. Seleccioná un patrón para ver su diagrama y justificación.</p>
+  </div>
+
+  <div class="patterns-grid">
+    <button class="pattern-chip active" onclick="selectPattern('strategy')">
+      <span>🎯</span> <span><strong>Strategy</strong><br><small>Comportamental</small></span>
+    </button>
+    <button class="pattern-chip" onclick="selectPattern('observer')">
+      <span>👁️</span> <span><strong>Observer</strong><br><small>Comportamental</small></span>
+    </button>
+    <button class="pattern-chip" onclick="selectPattern('state')">
+      <span>🔀</span> <span><strong>State</strong><br><small>Comportamental</small></span>
+    </button>
+    <button class="pattern-chip" onclick="selectPattern('repository')">
+      <span>🗃️</span> <span><strong>Repository</strong><br><small>Arquitectural</small></span>
+    </button>
+    <button class="pattern-chip" onclick="selectPattern('factory')">
+      <span>🏭</span> <span><strong>Factory Method</strong><br><small>Creacional</small></span>
+    </button>
+    <button class="pattern-chip" onclick="selectPattern('decorator')">
+      <span>🎁</span> <span><strong>Decorator</strong><br><small>Estructural</small></span>
+    </button>
+    <button class="pattern-chip" onclick="selectPattern('facade')">
+      <span>🚪</span> <span><strong>Facade</strong><br><small>Estructural</small></span>
+    </button>
+  </div>
+
+  <!-- STRATEGY -->
+  <div id="pat-strategy" class="pattern-content active">
+    <div class="card">
+      <div class="card-title">🎯 Strategy <span class="tag tag-behavioral">Comportamental</span></div>
+      <div class="card-desc">
+        <strong>Problema:</strong> El algoritmo que calcula el bienestar de la mascota puede variar. Modo principiante, modo estricto, modo académico — sin Strategy, cada variante requiere modificar <code>PetService</code> (viola OCP).<br><br>
+        <strong>Solución:</strong> Encapsular cada algoritmo en su propia clase. <code>PetService</code> trabaja con la interfaz <code>WellnessCalculator</code> sin conocer la implementación concreta.
+      </div>
+      <div class="diagram-wrap">
+        <div class="mermaid">
+classDiagram
+    class WellnessCalculator {
+        <<interface>>
+        +calculate(records, habits, days) WellnessScore
+    }
+    class WeightedAverageStrategy {
+        -applyExponentialWeight(dayIndex) float
+        +calculate(records, habits, days) WellnessScore
+    }
+    class StrictModeStrategy {
+        +calculate(records, habits, days) WellnessScore
+    }
+    class BeginnerModeStrategy {
+        +calculate(records, habits, days) WellnessScore
+    }
+    class PetService {
+        -wellnessCalculator WellnessCalculator
+        +recalcularEstado(userId) Pet
+    }
+
+    WellnessCalculator <|.. WeightedAverageStrategy : implementa
+    WellnessCalculator <|.. StrictModeStrategy : implementa
+    WellnessCalculator <|.. BeginnerModeStrategy : implementa
+    PetService --> WellnessCalculator : usa
+        </div>
+      </div>
+      <div class="card-rule"><strong>Por qué aquí:</strong> Agregar un nuevo modo de cálculo (ej: "Modo Vacaciones" que pausa la degradación) solo requiere crear una nueva clase — sin modificar PetService ni las estrategias existentes.</div>
+    </div>
+  </div>
+
+  <!-- OBSERVER -->
+  <div id="pat-observer" class="pattern-content">
+    <div class="card">
+      <div class="card-title">👁️ Observer <span class="tag tag-behavioral">Comportamental</span></div>
+      <div class="card-desc">
+        <strong>Problema:</strong> Cuando se completa un check-in, múltiples componentes deben reaccionar: PetService, StatsService, NotificationService. Si RecordService los llama directamente, el acoplamiento es insostenible.<br><br>
+        <strong>Solución:</strong> RecordService emite un evento <code>record.completed</code>. Los interesados se suscriben con <code>@OnEvent</code>. El emisor no conoce a los suscriptores.
+      </div>
+      <div class="diagram-wrap">
+        <div class="mermaid">
+classDiagram
+    class EventEmitter {
+        <<Subject>>
+        +emit(event, payload) void
+        +on(event, handler) void
+    }
+    class RecordService {
+        -eventEmitter EventEmitter
+        +checkIn(userId, habitId) CompletionRecord
+    }
+    class PetService {
+        +onRecordCompleted(payload) void
+    }
+    class StatsService {
+        +onRecordCompleted(payload) void
+    }
+    class NotificationService {
+        +onPetStateChanged(payload) void
+    }
+
+    RecordService --> EventEmitter : emite record.completed
+    PetService ..> EventEmitter : suscrito
+    StatsService ..> EventEmitter : suscrito
+    NotificationService ..> EventEmitter : suscrito
+        </div>
+      </div>
+      <div class="card-rule"><strong>Por qué aquí:</strong> Sin Observer, RecordService dependería directamente de PetService, StatsService y NotificationService — 3 dependencias acopladas. Con Observer, tiene una sola dependencia (EventEmitter) y es extensible sin modificación.</div>
+    </div>
+  </div>
+
+  <!-- STATE -->
+  <div id="pat-state" class="pattern-content">
+    <div class="card">
+      <div class="card-title">🔀 State <span class="tag tag-behavioral">Comportamental</span></div>
+      <div class="card-desc">
+        <strong>Problema:</strong> La mascota tiene 5 estados con comportamientos distintos (animación, mensaje, multiplicador XP, alertas). Sin State, hay bloques <code>switch</code> en múltiples lugares que crecen con cada nuevo estado.<br><br>
+        <strong>Solución:</strong> Cada estado es una clase que encapsula su propio comportamiento. <code>Pet</code> delega las decisiones de comportamiento a su objeto estado actual.
+      </div>
+      <div class="diagram-wrap">
+        <div class="mermaid">
+classDiagram
+    class PetStateHandler {
+        <<abstract>>
+        +getMessage() string
+        +getAnimationClass() string
+        +shouldAlert() bool
+        +getXpMultiplier() float
+    }
+    class CriticalState {
+        +getMessage() string
+        +getAnimationClass() string
+        +shouldAlert() bool
+        +getXpMultiplier() float
+    }
+    class PoorState
+    class NeutralState
+    class GoodState
+    class ExcellentState {
+        +getMessage() string
+        +getAnimationClass() string
+        +shouldAlert() bool
+        +getXpMultiplier() float
+    }
+    class Pet {
+        -stateHandler PetStateHandler
+        +getMessage() string
+        +getAnimationClass() string
+        +applyXpGain(base) int
+    }
+
+    PetStateHandler <|-- CriticalState
+    PetStateHandler <|-- PoorState
+    PetStateHandler <|-- NeutralState
+    PetStateHandler <|-- GoodState
+    PetStateHandler <|-- ExcellentState
+    Pet --> PetStateHandler : delega comportamiento
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPOSITORY -->
+  <div id="pat-repository" class="pattern-content">
+    <div class="card">
+      <div class="card-title">🗃️ Repository <span class="tag tag-architectural">Arquitectural</span></div>
+      <div class="card-desc">
+        <strong>Problema:</strong> Si PetService usa <code>EntityManager</code> o <code>JpaRepository</code> directamente, un cambio de ORM requiere modificar la lógica de negocio. Además, los tests unitarios no pueden correr sin base de datos.<br><br>
+        <strong>Solución:</strong> Interfaz <code>PetRepository</code> (abstracción). En producción: <code>JpaPetRepository extends JpaRepository</code>. En tests: <code>InMemoryPetRepository</code>.
+      </div>
+      <div class="diagram-wrap">
+        <div class="mermaid">
+classDiagram
+    class PetRepository {
+        <<abstract>>
+        +findByUserId(userId) Pet
+        +save(pet) Pet
+    }
+    class JpaPetRepository {
+        -prisma EntityManager
+        +findByUserId(userId) Pet
+        +save(pet) Pet
+        -toDomain(data) Pet
+        -toPersistence(pet) JpaEntity
+    }
+    class InMemoryPetRepository {
+        -storage Map
+        +findByUserId(userId) Pet
+        +save(pet) Pet
+    }
+    class PetService {
+        -petRepository PetRepository
+        +recalcularEstado(userId) Pet
+    }
+
+    PetRepository <|-- JpaPetRepository : producción
+    PetRepository <|-- InMemoryPetRepository : tests
+    PetService --> PetRepository : depende de abstracción
+        </div>
+      </div>
+      <div class="card-rule"><strong>Por qué aquí:</strong> Los tests unitarios de PetService corren sin base de datos real usando InMemoryPetRepository. Son rápidos, predecibles y no requieren Docker.</div>
+    </div>
+  </div>
+
+  <!-- FACTORY -->
+  <div id="pat-factory" class="pattern-content">
+    <div class="card">
+      <div class="card-title">🏭 Factory Method <span class="tag tag-creational">Creacional</span></div>
+      <div class="card-desc">
+        <strong>Problema:</strong> Hay diferentes tipos de hábitos (frecuencia semanal, meta única). HabitService no debería conocer los detalles de construcción de cada tipo.<br><br>
+        <strong>Solución:</strong> Cada tipo de hábito tiene su propia Factory. El registry de factories permite agregar nuevos tipos sin modificar código existente.
+      </div>
+      <div class="diagram-wrap">
+        <div class="mermaid">
+classDiagram
+    class HabitFactory {
+        <<abstract>>
+        +createHabit(dto, userId) Habit
+        #buildHabit(dto, userId) Habit
+    }
+    class FrequencyHabitFactory {
+        +createHabit(dto, userId) FrequencyHabit
+        #buildHabit(dto, userId) FrequencyHabit
+        -suggestDays(freq) int[]
+    }
+    class OneTimeHabitFactory {
+        +createHabit(dto, userId) OneTimeHabit
+        #buildHabit(dto, userId) OneTimeHabit
+    }
+    class HabitFactoryRegistry {
+        -factories Map
+        +getFactory(type) HabitFactory
+    }
+    class Habit {
+        <<abstract>>
+        +shouldCompleteOn(day) bool
+        +getXpReward() int
+    }
+
+    HabitFactory <|-- FrequencyHabitFactory
+    HabitFactory <|-- OneTimeHabitFactory
+    HabitFactoryRegistry --> HabitFactory
+    FrequencyHabitFactory ..> Habit
+    OneTimeHabitFactory ..> Habit
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DECORATOR -->
+  <div id="pat-decorator" class="pattern-content">
+    <div class="card">
+      <div class="card-title">🎁 Decorator <span class="tag tag-structural">Estructural</span></div>
+      <div class="card-desc">
+        <strong>Problema:</strong> Los hábitos pueden tener bonus combinables: "hábito del día" (2x XP) + "racha activa" (XP extra). Con herencia, 2 comportamientos generan 4 combinaciones; 3 generan 8 (explosión combinatoria).<br><br>
+        <strong>Solución:</strong> Cada comportamiento adicional es un Decorator que envuelve al hábito y agrega su lógica encima.
+      </div>
+      <div class="diagram-wrap">
+        <div class="mermaid">
+classDiagram
+    class HabitComponent {
+        <<interface>>
+        +getXpReward() int
+        +getDisplayName() string
+    }
+    class ConcreteHabit {
+        +getXpReward() int
+        +getDisplayName() string
+    }
+    class HabitDecorator {
+        <<abstract>>
+        -wrapped HabitComponent
+        +getXpReward() int
+        +getDisplayName() string
+    }
+    class DailyFeaturedDecorator {
+        +getXpReward() int
+        +getDisplayName() string
+    }
+    class StreakBonusDecorator {
+        -currentStreak int
+        +getXpReward() int
+    }
+
+    HabitComponent <|.. ConcreteHabit
+    HabitComponent <|.. HabitDecorator
+    HabitDecorator <|-- DailyFeaturedDecorator
+    HabitDecorator <|-- StreakBonusDecorator
+    HabitDecorator --> HabitComponent : wraps
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FACADE -->
+  <div id="pat-facade" class="pattern-content">
+    <div class="card">
+      <div class="card-title">🚪 Facade <span class="tag tag-structural">Estructural</span></div>
+      <div class="card-desc">
+        <strong>Problema:</strong> El proceso de check-in involucra múltiples pasos: verificar hábito, crear registro, recalcular mascota, calcular XP. Si el controller orquesta todo esto, tiene demasiadas responsabilidades.<br><br>
+        <strong>Solución:</strong> <code>CheckInFacade</code> expone una interfaz simple. El controller solo llama a <code>performCheckIn()</code>.
+      </div>
+      <div class="diagram-wrap">
+        <div class="mermaid">
+flowchart LR
+    RC["RecordController"] -->|"performCheckIn()"| CF["CheckInFacade"]
+    CF --> HR["HabitReader\n(verificar ownership)"]
+    CF --> RS["RecordService\n(crear registro)"]
+    CF --> PS["PetService\n(obtener estado)"]
+
+    style CF fill:#1e2535,stroke:#3b82f6,stroke-width:2px
+    style RC fill:#242838,stroke:#6366f1
+        </div>
+      </div>
+      <div class="card-rule"><strong>Por qué aquí:</strong> El Controller queda con una sola línea de lógica: llamar a la Facade. Si el proceso de check-in cambia (ej: se agrega gamificación), solo cambia la Facade, no el Controller.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SOLID ─── -->
+<section id="solid" class="section">
+  <div class="section-header">
+    <h2>SOLID & GRASP</h2>
+    <p>Cada principio aplicado con un ejemplo concreto del proyecto. No son ejemplos genéricos de "Animal/Perro".</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔩 Principios SOLID — Resumen Visual</div>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    subgraph S["S — Single Responsibility"]
+        SX["WellnessCalculator\nsolo calcula bienestar"]
+        SY["XpCalculator\nsolo calcula XP y niveles"]
+        SZ["PetService\nsolo coordina"]
+    end
+    subgraph O["O — Open/Closed"]
+        OX["WellnessCalculator\ninterface — cerrada"]
+        OY["WeightedAverageStrategy\n+ StrictModeStrategy\n+ BeginnerModeStrategy"]
+    end
+    subgraph L["L — Liskov"]
+        LX["Habit abstract"]
+        LY["FrequencyHabit"]
+        LZ["OneTimeHabit"]
+        LX --> LY & LZ
+    end
+    subgraph I["I — Interface Segregation"]
+        IX["HabitReader\nfindById, findActive"]
+        IY["HabitWriter\nsave, delete"]
+        IZ["HabitStatsReader\ncountByCategory"]
+    end
+    subgraph D["D — Dependency Inversion"]
+        DX["PetService\ndepende de PetRepository\nno de JpaPetRepository"]
+    end
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><span class="badge badge-purple">S</span> Single Responsibility</div>
+      <div class="card-desc">Una clase debe tener una única razón para cambiar.</div>
+      <table>
+        <thead><tr><th>Clase</th><th>Única responsabilidad</th></tr></thead>
+        <tbody>
+          <tr><td><code>WeightedAverageStrategy</code></td><td>Calcular bienestar con promedio ponderado</td></tr>
+          <tr><td><code>XpCalculator</code></td><td>Calcular XP ganado y nivel resultante</td></tr>
+          <tr><td><code>PetService</code></td><td>Orquestar la actualización de la mascota</td></tr>
+          <tr><td><code>PetRepository</code></td><td>Persistir y recuperar la entidad Pet</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="badge badge-blue">O</span> Open/Closed</div>
+      <div class="card-desc">Abierto para extensión, cerrado para modificación.</div>
+      <div class="card-rule">
+        <strong>Punto de extensión:</strong> <code>WellnessCalculator</code><br>
+        Para agregar "Modo Vacaciones" que pausa la degradación, se crea <code>VacationModeStrategy implements WellnessCalculator</code>.<br><br>
+        <code>PetService</code> no cambia. <code>WeightedAverageStrategy</code> no cambia.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="badge badge-green">L</span> Liskov Substitution</div>
+      <div class="card-desc">Las subclases deben poder reemplazar a la clase base sin romper el sistema.</div>
+      <div class="card-rule">
+        <code>WellnessCalculator.calculate(records, habits, days)</code> funciona igual con una lista mezclada de <code>FrequencyHabit</code> y <code>OneTimeHabit</code>. Agregar <code>ChallengeHabit</code> no rompe el cálculo — si respeta el contrato de <code>Habit</code>.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="badge badge-orange">I</span> Interface Segregation</div>
+      <div class="card-desc">Los clientes no deben depender de interfaces que no usan.</div>
+      <div class="card-rule">
+        <code>PetService</code> solo necesita leer hábitos → depende de <code>HabitReader</code> (2 métodos).<br><br>
+        Si cambia <code>HabitStatsReader</code> (métodos de estadísticas complejas), <code>PetService</code> no es afectado porque no depende de esa interfaz.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="badge badge-purple">D</span> Dependency Inversion — Diagrama</div>
+    <div class="card-desc">Módulos de alto nivel (PetService) no dependen de módulos de bajo nivel (JpaPetRepository). Ambos dependen de la abstracción (PetRepository).</div>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph High["Módulo de Alto Nivel"]
+        PS["PetService\n(lógica de negocio)"]
+    end
+    subgraph Abstraction["Abstracción"]
+        PR["PetRepository\n(abstract class)"]
+        WC["WellnessCalculator\n(interface)"]
+    end
+    subgraph Low["Módulos de Bajo Nivel (Infraestructura)"]
+        PPR["JpaPetRepository\n(JPA + PostgreSQL)"]
+        WAS["WeightedAverageStrategy\n(algoritmo concreto)"]
+    end
+
+    PS -->|"depende de"| PR & WC
+    PPR -->|"implementa"| PR
+    WAS -->|"implementa"| WC
+
+    style Abstraction fill:#1a2a1a,stroke:#10b981,stroke-width:2px
+    style High fill:#1e1a35,stroke:#8b5cf6
+    style Low fill:#2a1a1a,stroke:#f97316
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SIMULADOR ─── -->
+<section id="sim" class="section">
+  <div class="section-header">
+    <h2>Simulador de Mascota</h2>
+    <p>Interactuá con el motor de cálculo de bienestar. Ajustá el wellness score y el simulador de XP para ver cómo reacciona la mascota.</p>
+  </div>
+
+  <div class="grid-2">
+    <!-- Wellness Simulator -->
+    <div class="sim-container">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:4px">Estado de la Mascota</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Algoritmo: promedio ponderado exponencial (últimos 7 días)</p>
+
+      <div class="pet-display">
+        <span id="pet-emoji" class="pet-emoji">😐</span>
+        <div id="pet-name" class="pet-name">NEUTRAL</div>
+        <div id="pet-message" class="pet-message">La mascota está bien. Seguí cumpliendo tus hábitos.</div>
+      </div>
+
+      <div class="wellness-bar-wrap">
+        <div class="wellness-label">
+          <span>Bienestar</span>
+          <span id="score-label">50%</span>
+        </div>
+        <div class="wellness-bar">
+          <div id="wellness-fill" class="wellness-fill" style="width:50%;background:var(--muted)"></div>
+        </div>
+      </div>
+
+      <div class="slider-wrap">
+        <label>Ajustá el wellness score: <strong id="slider-val">50</strong>/100</label>
+        <input type="range" id="wellness-slider" min="0" max="100" value="50" oninput="updatePet(this.value)">
+      </div>
+
+      <div style="text-align:center">
+        <div id="state-badge" class="state-badge" style="border-color:var(--muted);color:var(--muted)">NEUTRAL</div>
+      </div>
+
+      <div class="divider"></div>
+      <div style="font-size:12px;color:var(--muted)">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>CRITICAL</span><span>0–20%</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>POOR</span><span>21–40%</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>NEUTRAL</span><span>41–60%</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>GOOD</span><span>61–80%</span></div>
+        <div style="display:flex;justify-content:space-between"><span>EXCELLENT</span><span>81–100%</span></div>
+      </div>
+    </div>
+
+    <!-- XP Calculator -->
+    <div class="sim-container">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:4px">Calculador de XP y Nivel</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Simulá cuánto XP gana la mascota según el estado y los hábitos cumplidos</p>
+
+      <div class="xp-inputs">
+        <div class="xp-input-group">
+          <label>Hábitos completados hoy</label>
+          <input type="number" id="xp-completed" min="0" max="10" value="3" oninput="calcXP()">
+        </div>
+        <div class="xp-input-group">
+          <label>Frecuencia semanal promedio</label>
+          <input type="number" id="xp-freq" min="1" max="7" value="5" oninput="calcXP()">
+        </div>
+        <div class="xp-input-group">
+          <label>XP total acumulado</label>
+          <input type="number" id="xp-total" min="0" value="350" oninput="calcXP()">
+        </div>
+        <div class="xp-input-group">
+          <label>Estado actual de mascota</label>
+          <select id="xp-state" onchange="calcXP()" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:14px;outline:none">
+            <option value="0.5">CRITICAL (×0.5)</option>
+            <option value="0.75">POOR (×0.75)</option>
+            <option value="1.0" selected>NEUTRAL (×1.0)</option>
+            <option value="1.25">GOOD (×1.25)</option>
+            <option value="1.5">EXCELLENT (×1.5)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="xp-result">
+        <div class="row"><span>XP base por hábito</span><span id="xp-base">—</span></div>
+        <div class="row"><span>Multiplicador de estado</span><span id="xp-mult">—</span></div>
+        <div class="row"><span>Hábitos completados</span><span id="xp-count">—</span></div>
+        <div class="row total"><span>XP ganado esta sesión</span><span id="xp-gained" style="color:var(--green)">—</span></div>
+        <div class="row total"><span>XP total → Nivel</span><span id="xp-level" style="color:var(--accent)">—</span></div>
+      </div>
+
+      <div id="level-bar-wrap" style="margin-top:16px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px">
+          <span id="level-label">Nivel 1</span>
+          <span id="level-progress-label">0 / 100 XP</span>
+        </div>
+        <div class="wellness-bar">
+          <div id="level-fill" class="wellness-fill" style="width:0%;background:var(--accent)"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Weight visualization -->
+  <div class="card" style="margin-top:24px">
+    <div class="card-title">📈 Visualizador del Algoritmo de Ponderación Exponencial</div>
+    <div class="card-desc">Los días más recientes tienen mayor impacto en el bienestar. La fórmula es <code>peso(i) = e^(-0.3 × i)</code> donde i=0 es hoy.</div>
+    <div id="weight-bars" style="display:flex;gap:8px;align-items:flex-end;height:120px;padding:0 4px;margin-top:16px"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <div id="weight-labels" style="display:flex;gap:8px;width:100%"></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+// ── LAZY MERMAID RENDER ──
+// Renderiza solo los diagramas visibles para evitar translate(NaN) en secciones ocultas
+const renderedSections = new Set();
+const renderedPatterns = new Set();
+
+function renderDiagrams(nodes) {
+  const pending = nodes.filter(n => !n.dataset.processed && !n.dataset.rendering);
+  if (pending.length === 0) return;
+  pending.forEach(n => n.dataset.rendering = '1');
+  mermaid.run({ nodes: pending }).catch(() => {});
+}
+
+function renderSection(id) {
+  if (renderedSections.has(id)) return;
+  renderedSections.add(id);
+  const section = document.getElementById(id);
+  // Solo renderiza diagramas que NO estén dentro de un .pattern-content oculto
+  const nodes = [...section.querySelectorAll('.mermaid')].filter(el => {
+    const pat = el.closest('.pattern-content');
+    return !pat || pat.classList.contains('active');
+  });
+  renderDiagrams(nodes);
+}
+
+// ── NAVIGATION ──
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  // Renderiza diagramas de la sección recién visible
+  requestAnimationFrame(() => renderSection(id));
+}
+
+// ── LAYER TOGGLE ──
+function toggleLayer(id) {
+  const detail = document.getElementById('detail-' + id);
+  const box = detail.previousElementSibling;
+  const isVisible = detail.classList.contains('visible');
+  document.querySelectorAll('.layer-detail').forEach(d => d.classList.remove('visible'));
+  document.querySelectorAll('.layer-box').forEach(b => b.classList.remove('selected'));
+  if (!isVisible) {
+    detail.classList.add('visible');
+    box.classList.add('selected');
+  }
+}
+
+// ── PATTERN SELECTOR ──
+function selectPattern(id) {
+  document.querySelectorAll('.pattern-content').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.pattern-chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('pat-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  // Renderiza los diagramas de este patrón solo la primera vez
+  if (!renderedPatterns.has(id)) {
+    renderedPatterns.add(id);
+    const nodes = [...document.getElementById('pat-' + id).querySelectorAll('.mermaid')];
+    requestAnimationFrame(() => renderDiagrams(nodes));
+  }
+}
+
+// ── PET SIMULATOR ──
+const petStates = {
+  CRITICAL: { emoji:'😢', color:'#ef4444', bg:'rgba(239,68,68,0.15)', message:'¡Tu mascota está en peligro! Necesita atención inmediata. Completá al menos un hábito hoy.' },
+  POOR:     { emoji:'😕', color:'#f97316', bg:'rgba(249,115,22,0.15)', message:'Tu mascota no está bien. Intentá cumplir más hábitos esta semana.' },
+  NEUTRAL:  { emoji:'😐', color:'#6b7280', bg:'rgba(107,114,128,0.15)', message:'La mascota está bien. Seguí cumpliendo tus hábitos para mejorar.' },
+  GOOD:     { emoji:'😊', color:'#10b981', bg:'rgba(16,185,129,0.15)', message:'¡Tu mascota está contenta! Mantenés un buen ritmo.' },
+  EXCELLENT:{ emoji:'🌟', color:'#8b5cf6', bg:'rgba(139,92,246,0.15)', message:'¡Tu mascota está radiante! Estás en tu mejor momento.' },
+};
+
+const barColors = { CRITICAL:'#ef4444', POOR:'#f97316', NEUTRAL:'#6b7280', GOOD:'#10b981', EXCELLENT:'#8b5cf6' };
+
+function getState(v) {
+  if (v <= 20) return 'CRITICAL';
+  if (v <= 40) return 'POOR';
+  if (v <= 60) return 'NEUTRAL';
+  if (v <= 80) return 'GOOD';
+  return 'EXCELLENT';
+}
+
+function updatePet(v) {
+  v = parseInt(v);
+  const state = getState(v);
+  const s = petStates[state];
+  document.getElementById('pet-emoji').textContent = s.emoji;
+  document.getElementById('pet-name').textContent = state;
+  document.getElementById('pet-message').textContent = s.message;
+  document.getElementById('wellness-fill').style.width = v + '%';
+  document.getElementById('wellness-fill').style.background = barColors[state];
+  document.getElementById('score-label').textContent = v + '%';
+  document.getElementById('slider-val').textContent = v;
+  const badge = document.getElementById('state-badge');
+  badge.textContent = state;
+  badge.style.borderColor = s.color;
+  badge.style.color = s.color;
+  badge.style.background = s.bg;
+}
+
+// ── XP CALCULATOR ──
+const XP_THRESHOLDS = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, Infinity];
+
+function calcXP() {
+  const completed = parseInt(document.getElementById('xp-completed').value) || 0;
+  const freq = parseInt(document.getElementById('xp-freq').value) || 1;
+  const totalXp = parseInt(document.getElementById('xp-total').value) || 0;
+  const mult = parseFloat(document.getElementById('xp-state').value);
+
+  const baseXpPerHabit = 10 + (8 - Math.min(freq, 7)) * 2;
+  const sessionXp = Math.round(completed * baseXpPerHabit * mult);
+  const newTotalXp = totalXp + sessionXp;
+
+  let level = 0;
+  for (let i = 0; i < XP_THRESHOLDS.length - 1; i++) {
+    if (newTotalXp >= XP_THRESHOLDS[i] && newTotalXp < XP_THRESHOLDS[i + 1]) { level = i + 1; break; }
+  }
+  level = Math.min(level || 10, 10);
+
+  const levelStart = XP_THRESHOLDS[level - 1];
+  const levelEnd = XP_THRESHOLDS[level] === Infinity ? XP_THRESHOLDS[level - 1] + 500 : XP_THRESHOLDS[level];
+  const progress = Math.min(((newTotalXp - levelStart) / (levelEnd - levelStart)) * 100, 100);
+
+  document.getElementById('xp-base').textContent = baseXpPerHabit + ' XP';
+  document.getElementById('xp-mult').textContent = '×' + mult;
+  document.getElementById('xp-count').textContent = completed;
+  document.getElementById('xp-gained').textContent = '+' + sessionXp + ' XP';
+  document.getElementById('xp-level').textContent = newTotalXp + ' XP → Nivel ' + level;
+  document.getElementById('level-label').textContent = 'Nivel ' + level + (level === 10 ? ' (Máximo)' : '');
+  document.getElementById('level-progress-label').textContent = (newTotalXp - levelStart) + ' / ' + (levelEnd - levelStart) + ' XP';
+  document.getElementById('level-fill').style.width = progress + '%';
+}
+
+// ── WEIGHT BARS ──
+function renderWeightBars() {
+  const container = document.getElementById('weight-bars');
+  const labels = document.getElementById('weight-labels');
+  container.innerHTML = '';
+  labels.innerHTML = '';
+  const days = 7;
+  const maxW = 1.0;
+  for (let i = 0; i < days; i++) {
+    const w = Math.exp(-0.3 * i);
+    const pct = (w / maxW) * 100;
+    const bar = document.createElement('div');
+    bar.style.cssText = `flex:1;background:linear-gradient(to top,#6366f1,#8b5cf6);height:${pct}%;border-radius:6px 6px 0 0;position:relative;`;
+    const tip = document.createElement('div');
+    tip.style.cssText = 'position:absolute;top:-24px;left:50%;transform:translateX(-50%);font-size:11px;color:#a5b4fc;white-space:nowrap;font-weight:600;';
+    tip.textContent = (w * 100).toFixed(0) + '%';
+    bar.appendChild(tip);
+    container.appendChild(bar);
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'flex:1;text-align:center;font-size:11px;color:#6b7280;';
+    lbl.textContent = i === 0 ? 'Hoy' : 'Día -' + i;
+    labels.appendChild(lbl);
+  }
+}
+
+// ── MERMAID INIT ──
+mermaid.initialize({
+  startOnLoad: false,   // Desactivado — renderizamos bajo demanda al navegar
+  theme: 'dark',
+  themeVariables: {
+    background: '#1a1d27',
+    primaryColor: '#242838',
+    primaryTextColor: '#e2e8f0',
+    primaryBorderColor: '#6366f1',
+    lineColor: '#6366f1',
+    secondaryColor: '#2e3347',
+    tertiaryColor: '#1a1d27',
+    edgeLabelBackground: '#1a1d27',
+    clusterBkg: '#1a1d27',
+    clusterBorder: '#2e3347',
+    titleColor: '#e2e8f0',
+    nodeTextColor: '#e2e8f0',
+  },
+  flowchart: { curve: 'basis', padding: 20 },
+  sequence: { diagramMarginX: 30, diagramMarginY: 20, actorMargin: 50, noteMargin: 10 },
+  er: { diagramPadding: 20, layoutDirection: 'TB', minEntityWidth: 100 },
+});
+
+// ── INIT ──
+window.addEventListener('load', () => {
+  updatePet(50);
+  calcXP();
+  renderWeightBars();
+  // Renderiza solo la sección inicial (C4) que está visible al cargar
+  requestAnimationFrame(() => renderSection('c4'));
+});
+</script>
+</body>
+</html>

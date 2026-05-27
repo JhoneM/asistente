@@ -1,0 +1,4 @@
+#!/bin/sh
+# Maven wrapper script - minimal version
+cd "$(dirname "$0")" || exit 1
+exec mvn "$@"
