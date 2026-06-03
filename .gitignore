@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*.local
+.idea
 
 # Backend
 backend/target/
@@ -29,3 +30,6 @@ Thumbs.db
 
 # Docker
 .dockerignore
+
+# git
+.gitkeep
