@@ -11,10 +11,25 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    postgresql:
+      transactional-lock: false
+
+jwt:
+  secret: ${JWT_SECRET:habitpet-dev-secret-key-for-local-development-only-32x}
+  expiration-ms: 86400000
 
 app:
   seed:
     enabled: ${APP_SEED_ENABLED:false}
+  security:
+    disabled: ${APP_SECURITY_DISABLED:false}
+
+logging:
+  level:
+    com.habitpet: WARN
+    root: WARN
+    org.springframework.web: WARN
+    org.hibernate: WARN
 
 server:
   port: 8080

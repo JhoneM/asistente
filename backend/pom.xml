@@ -103,6 +103,14 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- DevTools: hot reload en modo dev (excluido del JAR de producción) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+
         <!-- SpringDoc OpenAPI (Swagger) -->
         <dependency>
             <groupId>org.springdoc</groupId>

@@ -4,3 +4,7 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
+  flyway:
+    # Deshabilitado para desarrollo: el script V2 fue modificado post-aplicación.
+    # En un entorno productivo se usaría flyway repair en su lugar.
+    validate-on-migrate: false

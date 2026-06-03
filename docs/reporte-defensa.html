@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HabitPet — Reporte de Defensa</title>
+<style>
+  :root {
+    --primary: #1d4ed8;
+    --primary-light: #60a5fa;
+    --primary-dark: #1e3a5f;
+    --success: #166534;
+    --warning: #92400e;
+    --danger: #991b1b;
+    --neutral: #374151;
+    --bg: #f1f5f9;
+    --surface: #ffffff;
+    --border: #cbd5e1;
+    --text: #0f172a;
+    --text-muted: #475569;
+    --code-bg: #0f1e2e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+  /* Layout */
+  .layout { display: flex; min-height: 100vh; }
+  nav { width: 280px; min-width: 280px; background: #1e3a5f; color: white; padding: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  main { flex: 1; padding: 2rem 2.5rem; max-width: 960px; }
+
+  /* Nav */
+  .nav-header { padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .nav-header h1 { font-size: 1.2rem; font-weight: 700; }
+  .nav-header p { font-size: 0.75rem; opacity: 0.7; margin-top: 0.25rem; }
+  nav ul { list-style: none; padding: 1rem 0; }
+  nav li { }
+  nav a { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.5rem; color: rgba(255,255,255,0.75); text-decoration: none; font-size: 0.875rem; transition: all 0.15s; border-left: 3px solid transparent; }
+  nav a:hover, nav a.active { background: rgba(255,255,255,0.1); color: white; border-left-color: var(--primary-light); }
+  nav .section-label { padding: 0.75rem 1.5rem 0.25rem; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.5; font-weight: 600; }
+
+  /* Sections */
+  section { margin-bottom: 4rem; scroll-margin-top: 2rem; }
+  h2 { font-size: 1.75rem; color: var(--primary-dark); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--border); }
+  h3 { font-size: 1.2rem; color: var(--text); margin: 1.5rem 0 0.75rem; }
+  h4 { font-size: 1rem; color: var(--primary); margin: 1rem 0 0.5rem; font-weight: 600; }
+  p { margin-bottom: 0.75rem; color: var(--text); }
+
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  .card-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+  .badge { display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+  .badge-pattern { background: #ddd6fe; color: #3b0764; }
+  .badge-solid { background: #bbf7d0; color: #14532d; }
+  .badge-grasp { background: #fde68a; color: #713f12; }
+  .badge-decision { background: #fecaca; color: #7f1d1d; }
+  .badge-tradeoff { background: #bae6fd; color: #0c4a6e; }
+  .badge-ok { background: #bbf7d0; color: #14532d; }
+  .badge-no { background: #fecaca; color: #7f1d1d; }
+
+  /* Code */
+  pre { background: var(--code-bg); color: #e2e8f0; padding: 1.25rem; border-radius: 8px; overflow-x: auto; font-size: 0.8rem; line-height: 1.7; margin: 0.75rem 0; }
+  code { background: #1e3a5f; color: #93c5fd; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.85em; font-family: 'SF Mono', 'Fira Code', monospace; }
+  .code-comment { color: #94a3b8; font-style: italic; }
+  .code-keyword { color: #93c5fd; font-weight: 700; }
+  .code-string { color: #86efac; }
+  .code-annotation { color: #fcd34d; }
+  .code-type { color: #67e8f9; }
+
+  /* Flow diagram */
+  .flow { display: flex; flex-direction: column; gap: 0; margin: 1rem 0; }
+  .flow-step { display: flex; align-items: flex-start; gap: 1rem; }
+  .flow-connector { display: flex; flex-direction: column; align-items: center; min-width: 32px; }
+  .flow-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: white; flex-shrink: 0; }
+  .flow-line { width: 2px; height: 32px; background: var(--border); }
+  .flow-content { padding: 0.25rem 0 1.5rem; }
+  .flow-label { font-weight: 600; font-size: 0.9rem; }
+  .flow-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; }
+
+  /* Comparison table */
+  .compare { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .compare th { background: #1e3a5f; color: #f1f5f9; padding: 0.75rem 1rem; text-align: left; font-weight: 600; }
+  .compare td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); color: var(--text); }
+  .compare tr:nth-child(even) td { background: #f8fafc; }
+  .check { color: var(--success); font-weight: 700; }
+  .cross { color: var(--danger); font-weight: 700; }
+
+  /* Callout */
+  .callout { border-left: 4px solid; padding: 1rem 1.25rem; border-radius: 0 8px 8px 0; margin: 1rem 0; }
+  .callout-info { border-color: #3b82f6; background: #eff6ff; }
+  .callout-warning { border-color: #f59e0b; background: #fffbeb; }
+  .callout-success { border-color: #22c55e; background: #f0fdf4; }
+  .callout-danger { border-color: #ef4444; background: #fef2f2; }
+  .callout-title { font-weight: 700; font-size: 0.875rem; margin-bottom: 0.35rem; }
+
+  /* Toggle */
+  details { border: 1px solid var(--border); border-radius: 8px; margin: 0.75rem 0; }
+  summary { padding: 0.75rem 1rem; font-weight: 600; cursor: pointer; font-size: 0.9rem; list-style: none; display: flex; align-items: center; gap: 0.5rem; }
+  summary::before { content: '▶'; font-size: 0.65rem; transition: transform 0.2s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  .details-body { padding: 1rem 1.25rem; border-top: 1px solid var(--border); }
+
+  /* Pills */
+  .pill-group { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0; }
+  .pill { background: var(--bg); border: 1px solid var(--border); padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; color: var(--text-muted); }
+
+  /* Hero */
+  .hero { background: linear-gradient(135deg, #1e3a5f, #1d4ed8); color: white; padding: 2.5rem; border-radius: 16px; margin-bottom: 2rem; }
+  .hero h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+  .hero p { opacity: 0.85; font-size: 1rem; }
+  .hero-meta { display: flex; gap: 2rem; margin-top: 1.5rem; }
+  .hero-stat { text-align: center; }
+  .hero-stat .num { font-size: 2rem; font-weight: 800; }
+  .hero-stat .label { font-size: 0.75rem; opacity: 0.7; }
+
+  /* Grid */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } .layout { flex-direction: column; } nav { width: 100%; position: static; height: auto; } }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+<nav id="sidebar">
+  <div class="nav-header">
+    <h1>HabitPet</h1>
+    <p>Reporte Técnico de Defensa</p>
+  </div>
+  <ul>
+    <li><a href="#resumen">📋 Resumen ejecutivo</a></li>
+    <li><a href="#implementado">✅ Qué se implementó</a></li>
+    <li><a href="#arquitectura">🏗️ Arquitectura</a></li>
+    <div class="section-label">Patrones de Diseño</div>
+    <li><a href="#strategy">Strategy</a></li>
+    <li><a href="#observer">Observer</a></li>
+    <li><a href="#facade">Facade</a></li>
+    <li><a href="#repository">Repository</a></li>
+    <div class="section-label">Principios SOLID</div>
+    <li><a href="#ocp">OCP — Open/Closed</a></li>
+    <li><a href="#srp">SRP — Single Responsibility</a></li>
+    <li><a href="#dip">DIP — Dependency Inversion</a></li>
+    <li><a href="#lsp">LSP + ISP</a></li>
+    <div class="section-label">Principios GRASP</div>
+    <li><a href="#grasp">Alta Cohesión · Polimorfismo</a></li>
+    <div class="section-label">Decisiones Técnicas</div>
+    <li><a href="#no-aplicados">Patrones NO aplicados</a></li>
+    <li><a href="#tradeoffs">Trade-offs aceptados</a></li>
+    <li><a href="#flujo">Flujo completo</a></li>
+    <li><a href="#tests">Tests</a></li>
+  </ul>
+</nav>
+
+<main>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>HabitPet — Defensa Técnica</h1>
+  <p>Proyecto universitario UADE 2026 · Sistema web tipo Tamagotchi vinculado a hábitos saludables</p>
+  <div class="hero-meta">
+    <div class="hero-stat"><div class="num">7</div><div class="label">Módulos</div></div>
+    <div class="hero-stat"><div class="num">42</div><div class="label">Tests unitarios</div></div>
+    <div class="hero-stat"><div class="num">4</div><div class="label">Patrones GoF</div></div>
+    <div class="hero-stat"><div class="num">5</div><div class="label">Principios SOLID</div></div>
+    <div class="hero-stat"><div class="num">3</div><div class="label">Principios GRASP</div></div>
+  </div>
+</div>
+
+<!-- RESUMEN -->
+<section id="resumen">
+  <h2>Resumen ejecutivo</h2>
+  <p>HabitPet es una aplicación que conecta el seguimiento de hábitos saludables con el concepto de mascota virtual al estilo Tamagotchi. La premisa central es que vincular el progreso a una entidad con la que el usuario desarrolla un vínculo emocional aumenta la retención frente a apps de tracking tradicionales con métricas abstractas.</p>
+
+  <div class="card">
+    <h4>Stack técnico</h4>
+    <div class="pill-group">
+      <span class="pill">Spring Boot 3.3</span>
+      <span class="pill">Java 21</span>
+      <span class="pill">Spring Data JPA</span>
+      <span class="pill">Spring Security + JWT</span>
+      <span class="pill">Spring WebSocket + STOMP</span>
+      <span class="pill">PostgreSQL 16</span>
+      <span class="pill">Flyway</span>
+      <span class="pill">React 18 + Vite</span>
+      <span class="pill">TypeScript</span>
+      <span class="pill">Zustand</span>
+      <span class="pill">TailwindCSS</span>
+      <span class="pill">Docker Compose</span>
+    </div>
+  </div>
+
+  <div class="callout callout-info">
+    <div class="callout-title">Contexto de la defensa</div>
+    El énfasis de esta documentación no está en el volumen de funcionalidades sino en la <strong>correcta aplicación de principios de diseño</strong>, la <strong>justificación de cada decisión arquitectónica</strong> y la documentación explícita de los trade-offs aceptados por ser un proyecto universitario.
+  </div>
+</section>
+
+<!-- QUÉ SE IMPLEMENTÓ -->
+<section id="implementado">
+  <h2>Qué se implementó</h2>
+
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-connector"><div class="flow-dot" style="background:#4f46e5">1</div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-label">Auth — Registro y Login</div><div class="flow-sub">JWT stateless · BCrypt · Spring Security · <code>POST /api/auth/register</code> · <code>POST /api/auth/login</code></div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-connector"><div class="flow-dot" style="background:#7c3aed">2</div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-label">Habits — CRUD de hábitos</div><div class="flow-sub">Crear · listar activos · archivar (soft delete) · límite 10 activos · <code>GET/POST/DELETE /api/habits</code></div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-connector"><div class="flow-dot" style="background:#0891b2">3</div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-label">Records — Check-ins diarios</div><div class="flow-sub">Un check-in por hábito por día · validación de ownership · <code>POST /api/records</code></div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-connector"><div class="flow-dot" style="background:#059669">4</div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-label">WellnessCalculator — Cálculo de bienestar (Strategy)</div><div class="flow-sub">Promedio ponderado exponencial de los últimos 7 días · más peso a días recientes · interfaz intercambiable</div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-connector"><div class="flow-dot" style="background:#d97706">5</div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-label">WellnessService — Orquestador (Facade + Observer)</div><div class="flow-sub">Escucha CheckInCompletedEvent · coordina HabitService, RecordService, WellnessCalculator, PetService</div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-connector"><div class="flow-dot" style="background:#dc2626">6</div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-label">PetService — Actualización de mascota</div><div class="flow-sub">Actualiza estado según WellnessScore · acumula XP · calcula nivel · <code>GET /api/pets/me</code></div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-connector"><div class="flow-dot" style="background:#4f46e5">7</div></div>
+      <div class="flow-content"><div class="flow-label">WebSocket — Tiempo real</div><div class="flow-sub">STOMP sobre SockJS · topic público por usuario · frontend actualiza mascota sin recargar</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ARQUITECTURA -->
+<section id="arquitectura">
+  <h2>Arquitectura</h2>
+
+  <div class="card">
+    <h4>Decisión: capas horizontales en lugar de paquetes DDD por dominio</h4>
+    <p><strong>Lo que teníamos planificado:</strong> paquetes organizados por bounded context (<code>auth/</code>, <code>habit/</code>, <code>record/</code>, etc.), cada uno con sus subcarpetas <code>domain/</code>, <code>repository/</code>, <code>service/</code>.</p>
+    <p><strong>Lo que se implementó:</strong> capas horizontales planas: <code>models/</code>, <code>repositories/</code>, <code>services/</code>, <code>controllers/</code>, etc.</p>
+    <p><strong>Justificación:</strong> Para un MVP universitario con ~10 entidades, la estructura DDD agrega complejidad sin beneficio real. Las capas horizontales son más intuitivas, más fáciles de navegar y demuestran igualmente la separación de responsabilidades. El DDD escala cuando los bounded contexts son verdaderamente independientes y hay equipos separados — acá no es el caso.</p>
+  </div>
+
+  <div class="card">
+    <h4>Decisión: Modelo de dominio anémico (sin lógica en entidades)</h4>
+    <p>Las entidades JPA son <em>data holders</em> puros: getters, setters, timestamps. Toda la lógica de negocio vive en los <em>services</em>.</p>
+    <p><strong>Justificación:</strong> Facilita el testing (servicios testeables con mocks simples), evita el acoplamiento de entidades a Spring (no necesitan ApplicationContext), y mantiene la separación entre el modelo de datos y el modelo de negocio. El modelo rico (Rich Domain Model) tiene valor cuando las reglas de negocio son complejas y viven naturalmente en la entidad — acá la complejidad vive en el cálculo de bienestar, que se implementó correctamente con Strategy.</p>
+    <div class="callout callout-warning">
+      <div class="callout-title">Nota para la defensa</div>
+      Esta es una decisión deliberada y justificada, no un olvido. Se discutió y se eligió conscientemente.
+    </div>
+  </div>
+
+  <div class="card">
+    <h4>Reglas de comunicación entre capas</h4>
+    <table class="compare">
+      <tr><th>Regla</th><th>Por qué</th></tr>
+      <tr><td><code>Controller</code> → solo llama a su <code>Service</code></td><td>El controller no tiene lógica de negocio</td></tr>
+      <tr><td><code>Service</code> → solo accede a su propio <code>Repository</code></td><td>Encapsulamiento de datos por dominio</td></tr>
+      <tr><td><code>Service</code> → puede llamar a otros <code>Services</code></td><td>Composición en lugar de acoplamiento directo a repos ajenos</td></tr>
+      <tr><td><code>WellnessService</code> → orquesta sin acoplarse</td><td>Facade: conoce todos los servicios pero ninguno lo conoce a él</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- STRATEGY -->
+<section id="strategy">
+  <h2>Pattern: Strategy</h2>
+  <div class="card-header"><span class="badge badge-pattern">Patrón GoF</span><strong>WellnessCalculator</strong></div>
+
+  <p><strong>Problema:</strong> el algoritmo de cálculo de bienestar de la mascota podía variar. En el MVP se usa promedio ponderado exponencial, pero podría cambiar a promedio lineal, scoring por racha, etc.</p>
+  <p><strong>Solución:</strong> encapsular el algoritmo detrás de una interfaz. <code>WellnessService</code> no sabe qué implementación está usando — recibe un <code>WellnessCalculator</code> por constructor (Spring lo inyecta).</p>
+
+  <pre><span class="code-comment">// Interfaz Strategy — cerrada para modificación</span>
+<span class="code-keyword">public interface</span> <span class="code-type">WellnessCalculator</span> {
+    <span class="code-type">WellnessScore</span> calculate(
+        List&lt;<span class="code-type">Habit</span>&gt; activeHabits,
+        List&lt;<span class="code-type">CompletionRecord</span>&gt; recentRecords,
+        <span class="code-type">LocalDate</span> referenceDate
+    );
+}
+
+<span class="code-comment">// Implementación concreta: exponential weighted average</span>
+<span class="code-annotation">@Component</span>
+<span class="code-keyword">public class</span> <span class="code-type">ExponentialWeightedWellnessCalculator</span> <span class="code-keyword">implements</span> <span class="code-type">WellnessCalculator</span> {
+    <span class="code-keyword">private static final double</span> DECAY = Math.log(2); <span class="code-comment">// peso se reduce a la mitad cada día</span>
+    <span class="code-keyword">private static final int</span> WINDOW_DAYS = 7;
+
+    <span class="code-annotation">@Override</span>
+    <span class="code-keyword">public</span> <span class="code-type">WellnessScore</span> calculate(...) {
+        <span class="code-comment">// weight(day) = e^(-ln(2) * day)</span>
+        <span class="code-comment">// día 0 (hoy) = peso 1.0, día 6 = peso 0.094</span>
+    }
+}
+
+<span class="code-comment">// WellnessService no sabe qué implementación usa</span>
+<span class="code-annotation">@Service</span>
+<span class="code-keyword">public class</span> <span class="code-type">WellnessService</span> {
+    <span class="code-keyword">private final</span> <span class="code-type">WellnessCalculator</span> wellnessCalculator; <span class="code-comment">// depende de la abstracción</span>
+}</pre>
+
+  <div class="callout callout-success">
+    <div class="callout-title">¿Cuándo aplicar Strategy?</div>
+    Cuando hay un algoritmo que puede variar independientemente de quien lo usa. Acá el algoritmo de bienestar es el candidato natural: podría cambiar sin tocar WellnessService ni ningún otro componente.
+  </div>
+
+  <details>
+    <summary>Algoritmo del cálculo de bienestar</summary>
+    <div class="details-body">
+      <p>Para cada uno de los últimos 7 días:</p>
+      <ul style="margin: 0.5rem 0 0.5rem 1.5rem;">
+        <li><strong>weight(día)</strong> = e<sup>-ln(2) × día</sup> (día 0 = hoy, peso máximo)</li>
+        <li><strong>dailyRate</strong> = check-ins ese día / total hábitos activos</li>
+        <li><strong>weightedSum</strong> += weight × dailyRate</li>
+      </ul>
+      <p><strong>score final</strong> = (weightedSum / totalWeight) × 100</p>
+      <p>Ejemplo: 1 hábito, check-ins en días 0, 1, 3 → score ≈ 82% (GOOD). Con promedio simple sería 3/7 = 43% (NEUTRAL). La diferencia es que los check-ins recientes (hoy y ayer) tienen mucho más peso.</p>
+    </div>
+  </details>
+</section>
+
+<!-- OBSERVER -->
+<section id="observer">
+  <h2>Pattern: Observer</h2>
+  <div class="card-header"><span class="badge badge-pattern">Patrón GoF</span><strong>Spring Application Events</strong></div>
+
+  <p><strong>Problema:</strong> <code>RecordService</code> guarda el check-in. ¿Cómo notifica a <code>WellnessService</code> sin acoplarse directamente a él?</p>
+  <p><strong>Solución:</strong> Spring Events. <code>RecordService</code> publica un evento; <code>WellnessService</code> lo escucha con <code>@EventListener</code>. Ninguno sabe del otro.</p>
+
+  <pre><span class="code-comment">// El evento — simple record de Java 21</span>
+<span class="code-keyword">public record</span> <span class="code-type">CheckInCompletedEvent</span>(String userId, <span class="code-type">LocalDate</span> date) {}
+
+<span class="code-comment">// Publisher: RecordService solo sabe publicar el evento</span>
+<span class="code-annotation">@Service</span>
+<span class="code-keyword">public class</span> <span class="code-type">RecordService</span> {
+    <span class="code-keyword">private final</span> <span class="code-type">ApplicationEventPublisher</span> eventPublisher;
+
+    <span class="code-keyword">public</span> RecordResponse checkIn(String userId, ...) {
+        <span class="code-comment">// ... guardar check-in ...</span>
+        eventPublisher.publishEvent(<span class="code-keyword">new</span> <span class="code-type">CheckInCompletedEvent</span>(userId, today));
+        <span class="code-comment">// RecordService NO conoce WellnessService</span>
+    }
+}
+
+<span class="code-comment">// Subscriber: WellnessService escucha sin que nadie lo llame directamente</span>
+<span class="code-annotation">@Service</span>
+<span class="code-keyword">public class</span> <span class="code-type">WellnessService</span> {
+    <span class="code-annotation">@EventListener</span>
+    <span class="code-keyword">public void</span> onCheckInCompleted(<span class="code-type">CheckInCompletedEvent</span> event) {
+        <span class="code-comment">// recalcula wellness y actualiza mascota</span>
+    }
+}</pre>
+
+  <div class="grid-2">
+    <div class="callout callout-success">
+      <div class="callout-title">Ventaja del desacoplamiento</div>
+      Si mañana queremos mandar también una notificación push cuando alguien hace check-in, creamos un <code>NotificationService</code> con <code>@EventListener(CheckInCompletedEvent.class)</code> y no tocamos <code>RecordService</code>.
+    </div>
+    <div class="callout callout-warning">
+      <div class="callout-title">Nota técnica</div>
+      Por defecto, Spring Events son síncronos — el evento se procesa en el mismo thread y transacción. Para producción, se usaría <code>@Async</code> para no bloquear la respuesta HTTP mientras se calcula el bienestar.
+    </div>
+  </div>
+</section>
+
+<!-- FACADE -->
+<section id="facade">
+  <h2>Pattern: Facade</h2>
+  <div class="card-header"><span class="badge badge-pattern">Patrón GoF</span><strong>WellnessService como Facade</strong></div>
+
+  <p><strong>Problema:</strong> el flujo post-check-in involucra múltiples servicios (HabitService, RecordService, WellnessCalculator, PetService, PetWebSocketGateway). Coordinar todo eso en el RecordController o en cada servicio individualmente crearía acoplamiento.</p>
+  <p><strong>Solución:</strong> <code>WellnessService</code> actúa como Facade. Conoce todos los componentes necesarios, los coordina, y ningún otro componente necesita saber de esta orquestación.</p>
+
+  <pre><span class="code-annotation">@Service</span>
+<span class="code-keyword">public class</span> <span class="code-type">WellnessService</span> {
+    <span class="code-comment">// Conoce todos los componentes — nadie más necesita hacerlo</span>
+    <span class="code-keyword">private final</span> <span class="code-type">HabitService</span> habitService;
+    <span class="code-keyword">private final</span> <span class="code-type">RecordService</span> recordService;
+    <span class="code-keyword">private final</span> <span class="code-type">WellnessCalculator</span> wellnessCalculator;
+    <span class="code-keyword">private final</span> <span class="code-type">PetService</span> petService;
+    <span class="code-keyword">private final</span> <span class="code-type">PetWebSocketGateway</span> petWebSocketGateway;
+
+    <span class="code-annotation">@EventListener</span>
+    <span class="code-keyword">public void</span> onCheckInCompleted(<span class="code-type">CheckInCompletedEvent</span> event) {
+        List&lt;<span class="code-type">Habit</span>&gt; habits = habitService.listActiveHabits(event.userId());
+        List&lt;<span class="code-type">CompletionRecord</span>&gt; records = recordService.getRecentRecords(event.userId(), 7);
+        <span class="code-type">WellnessScore</span> score = wellnessCalculator.calculate(habits, records, event.date());
+        <span class="code-type">Pet</span> pet = petService.updateWellness(event.userId(), score);
+        petWebSocketGateway.notifyPetUpdate(event.userId(), pet, score);
+    }
+}</pre>
+
+  <p>Cada servicio mantiene su propia responsabilidad. <code>WellnessService</code> es el único que sabe cómo ensamblarlos. Los controllers y otros servicios solo interactúan con servicios específicos, no con este flujo complejo.</p>
+</section>
+
+<!-- REPOSITORY -->
+<section id="repository">
+  <h2>Pattern: Repository</h2>
+  <div class="card-header"><span class="badge badge-pattern">Patrón GoF</span><strong>Spring Data JPA</strong></div>
+
+  <p>Los repositorios abstraen el acceso a datos. Los servicios nunca construyen queries directamente — trabajan con interfaces tipadas que Spring implementa automáticamente.</p>
+
+  <pre><span class="code-comment">// Los servicios dependen de interfaces, no de SQL</span>
+<span class="code-keyword">public interface</span> <span class="code-type">CompletionRecordRepository</span> <span class="code-keyword">extends</span> <span class="code-type">JpaRepository</span>&lt;<span class="code-type">CompletionRecord</span>, String&gt; {
+
+    <span class="code-comment">// Spring genera la query: SELECT * FROM completion_records WHERE habit_id=? AND date=?</span>
+    <span class="code-keyword">boolean</span> existsByHabitIdAndDate(String habitId, <span class="code-type">LocalDate</span> date);
+
+    <span class="code-comment">// Para la ventana de wellness: query JPQL explícita por legibilidad</span>
+    <span class="code-annotation">@Query</span>(<span class="code-string">"SELECT r FROM CompletionRecord r WHERE r.userId=:userId AND r.date>=:from AND r.date<=:to ORDER BY r.date DESC"</span>)
+    List&lt;<span class="code-type">CompletionRecord</span>&gt; findByUserIdInDateRange(...);
+}</pre>
+
+  <div class="callout callout-info">
+    <div class="callout-title">Decisión de diseño: userId desnormalizado en CompletionRecord</div>
+    <code>CompletionRecord</code> tiene <code>userId</code> como campo directo (sin FK JPA a <code>User</code>). Esto permite un índice compuesto <code>(user_id, date)</code> que soporta eficientemente la query de bienestar sin necesidad de JOIN. Documentado como decisión de performance intencional.
+  </div>
+</section>
+
+<!-- OCP -->
+<section id="ocp">
+  <h2>SOLID: Open/Closed Principle</h2>
+  <div class="card-header"><span class="badge badge-solid">SOLID — OCP</span><strong>Jerarquía de excepciones</strong></div>
+
+  <p><strong>El principio:</strong> las clases deben estar abiertas para extensión pero cerradas para modificación.</p>
+  <p><strong>Dónde se aplica:</strong> el manejo de excepciones. <code>GlobalExceptionHandler</code> captura <code>AppException</code> (la clase base) y <strong>nunca se modifica</strong> aunque agreguemos nuevos tipos de error.</p>
+
+  <pre><span class="code-comment">// Clase base — cerrada para modificación</span>
+<span class="code-keyword">public abstract class</span> <span class="code-type">AppException</span> <span class="code-keyword">extends</span> <span class="code-type">RuntimeException</span> {
+    <span class="code-keyword">private final</span> <span class="code-type">HttpStatus</span> status;
+    <span class="code-keyword">private final</span> String code;
+    <span class="code-keyword">private final</span> String userMessage;
+    <span class="code-keyword">private final</span> String logMessage; <span class="code-comment">// opcional</span>
+}
+
+<span class="code-comment">// Extensión sin tocar nada existente</span>
+<span class="code-keyword">public class</span> <span class="code-type">ResourceNotFoundException</span> <span class="code-keyword">extends</span> <span class="code-type">AppException</span> { ... }
+<span class="code-keyword">public class</span> <span class="code-type">ResourceAlreadyExistsException</span> <span class="code-keyword">extends</span> <span class="code-type">AppException</span> { ... }
+<span class="code-keyword">public class</span> <span class="code-type">InvalidCredentialsException</span> <span class="code-keyword">extends</span> <span class="code-type">AppException</span> { ... }
+<span class="code-keyword">public class</span> <span class="code-type">DuplicateCheckInException</span> <span class="code-keyword">extends</span> <span class="code-type">AppException</span> { ... }
+<span class="code-keyword">public class</span> <span class="code-type">LimitExceededException</span> <span class="code-keyword">extends</span> <span class="code-type">AppException</span> { ... }
+
+<span class="code-comment">// El handler captura la base — NUNCA se modifica</span>
+<span class="code-annotation">@RestControllerAdvice</span>
+<span class="code-keyword">public class</span> <span class="code-type">GlobalExceptionHandler</span> {
+    <span class="code-annotation">@ExceptionHandler</span>(<span class="code-type">AppException</span>.class)
+    <span class="code-keyword">public</span> ResponseEntity&lt;<span class="code-type">ErrorResponse</span>&gt; handle(<span class="code-type">AppException</span> ex) {
+        <span class="code-comment">// Funciona para todas las subclases actuales y futuras</span>
+    }
+}</pre>
+
+  <div class="callout callout-success">
+    <div class="callout-title">OCP + Strategy juntos</div>
+    <code>WellnessCalculator</code> también demuestra OCP: para cambiar el algoritmo, se crea una nueva clase que implementa la interfaz. <code>WellnessService</code> no se modifica.
+  </div>
+</section>
+
+<!-- SRP -->
+<section id="srp">
+  <h2>SOLID: Single Responsibility Principle</h2>
+  <div class="card-header"><span class="badge badge-solid">SOLID — SRP</span><strong>Alta cohesión por servicio</strong></div>
+
+  <table class="compare">
+    <tr><th>Clase</th><th>Responsabilidad única</th><th>Lo que NO hace</th></tr>
+    <tr><td><code>AuthService</code></td><td>Registro y login</td><td>No sabe de hábitos ni mascotas</td></tr>
+    <tr><td><code>HabitService</code></td><td>CRUD de hábitos</td><td>No calcula bienestar ni toca mascotas</td></tr>
+    <tr><td><code>RecordService</code></td><td>Guardar check-ins</td><td>No recalcula bienestar — publica evento</td></tr>
+    <tr><td><code>WellnessService</code></td><td>Orquestar el flujo post check-in</td><td>No persiste datos directamente</td></tr>
+    <tr><td><code>PetService</code></td><td>Actualizar estado + XP de la mascota</td><td>No calcula el wellness score</td></tr>
+    <tr><td><code>PetWebSocketGateway</code></td><td>Publicar updates por WebSocket</td><td>No tiene lógica de negocio</td></tr>
+    <tr><td><code>JwtService</code></td><td>Generar y validar tokens JWT</td><td>No sabe de usuarios ni de autenticación</td></tr>
+  </table>
+</section>
+
+<!-- DIP -->
+<section id="dip">
+  <h2>SOLID: Dependency Inversion Principle</h2>
+  <div class="card-header"><span class="badge badge-solid">SOLID — DIP</span><strong>Depender de abstracciones</strong></div>
+
+  <p><strong>El principio:</strong> los módulos de alto nivel no deben depender de módulos de bajo nivel. Ambos deben depender de abstracciones.</p>
+
+  <div class="grid-2">
+    <div>
+      <h4>Aplicado: WellnessService</h4>
+      <pre><span class="code-comment">// Depende de la interfaz, no de la implementación</span>
+<span class="code-keyword">private final</span> <span class="code-type">WellnessCalculator</span> wellnessCalculator;
+<span class="code-comment">// Spring inyecta ExponentialWeighted...
+// sin que WellnessService lo sepa</span></pre>
+    </div>
+    <div>
+      <h4>Aplicado: Constructor injection</h4>
+      <pre><span class="code-comment">// Sin @Autowired en campos — siempre
+// inyección por constructor</span>
+<span class="code-annotation">@RequiredArgsConstructor</span>
+<span class="code-keyword">public class</span> <span class="code-type">HabitService</span> {
+    <span class="code-keyword">private final</span> <span class="code-type">HabitRepository</span> repo;
+    <span class="code-keyword">private final</span> <span class="code-type">UserRepository</span> userRepo;
+}</pre>
+    </div>
+  </div>
+
+  <div class="callout callout-info">
+    <div class="callout-title">Por qué constructor injection</div>
+    La inyección por campo (<code>@Autowired</code>) hace las dependencias implícitas y dificulta el testing (no se puede crear el objeto sin un contexto de Spring). La inyección por constructor hace las dependencias explícitas, permite tests con simples <code>new Service(mockRepo)</code>, y garantiza que el objeto es inmutable después de crearse.
+  </div>
+</section>
+
+<!-- LSP + ISP -->
+<section id="lsp">
+  <h2>SOLID: LSP + ISP</h2>
+
+  <div class="card">
+    <div class="card-header"><span class="badge badge-solid">SOLID — LSP</span><strong>Liskov Substitution Principle</strong></div>
+    <p>Todas las subclases de <code>AppException</code> son sustituibles por la clase base sin alterar el comportamiento del <code>GlobalExceptionHandler</code>. El handler llama <code>ex.getStatus()</code>, <code>ex.getCode()</code>, <code>ex.getUserMessage()</code> — métodos definidos en la base y correctamente implementados por todas las subclases.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="badge badge-solid">SOLID — ISP</span><strong>Interface Segregation Principle</strong></div>
+    <p><code>WellnessCalculator</code> tiene un solo método. <code>UserRepository</code> expone solo <code>findByEmail</code> y <code>existsByEmail</code> — no expone operaciones de otros dominios. Las interfaces son pequeñas y cohesivas; ningún cliente se ve forzado a depender de métodos que no usa.</p>
+  </div>
+</section>
+
+<!-- GRASP -->
+<section id="grasp">
+  <h2>Principios GRASP</h2>
+
+  <div class="card">
+    <div class="card-header"><span class="badge badge-grasp">GRASP</span><strong>Alta Cohesión</strong></div>
+    <p>Cada servicio tiene responsabilidades altamente relacionadas entre sí. <code>HabitService</code> solo sabe de hábitos. <code>RecordService</code> solo sabe de check-ins. Esta cohesión alta se mantiene gracias a las reglas de comunicación entre capas: cada servicio accede solo a su propio repositorio.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="badge badge-grasp">GRASP</span><strong>Polimorfismo</strong></div>
+    <p>El <code>GlobalExceptionHandler</code> llama <code>ex.getStatus()</code> sobre cualquier <code>AppException</code> sin saber qué subclase es en tiempo de compilación. Java resuelve el método correcto en runtime según el tipo real del objeto. Esto es polimorfismo GRASP en acción: el comportamiento varía según el tipo, sin conditionals (<code>if instanceof</code>).</p>
+    <pre><span class="code-comment">// Sin polimorfismo (mal):</span>
+<span class="code-keyword">if</span> (ex <span class="code-keyword">instanceof</span> <span class="code-type">ResourceNotFoundException</span>) { status = 404; }
+<span class="code-keyword">else if</span> (ex <span class="code-keyword">instanceof</span> <span class="code-type">DuplicateCheckInException</span>) { status = 409; }
+
+<span class="code-comment">// Con polimorfismo (bien) — el tipo sabe su propio status:</span>
+<span class="code-type">HttpStatus</span> status = ex.getStatus(); <span class="code-comment">// funciona para todas las subclases</span></pre>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="badge badge-grasp">GRASP</span><strong>Information Expert</strong></div>
+    <p><code>WellnessScore</code> (value object) tiene el método <code>toState()</code> que convierte el score numérico a <code>PetState</code>. ¿Por qué está en <code>WellnessScore</code> y no en <code>PetService</code>? Porque <code>WellnessScore</code> es el experto en información sobre el score — es quien tiene los umbrales y sabe qué significa cada rango.</p>
+    <pre><span class="code-keyword">public record</span> <span class="code-type">WellnessScore</span>(<span class="code-keyword">double</span> value) {
+    <span class="code-keyword">public</span> <span class="code-type">PetState</span> toState() {
+        <span class="code-keyword">if</span> (value &lt;= 20.0) <span class="code-keyword">return</span> <span class="code-type">PetState</span>.CRITICAL;
+        <span class="code-keyword">if</span> (value &lt;= 40.0) <span class="code-keyword">return</span> <span class="code-type">PetState</span>.POOR;
+        <span class="code-keyword">if</span> (value &lt;= 60.0) <span class="code-keyword">return</span> <span class="code-type">PetState</span>.NEUTRAL;
+        <span class="code-keyword">if</span> (value &lt;= 80.0) <span class="code-keyword">return</span> <span class="code-type">PetState</span>.GOOD;
+        <span class="code-keyword">return</span> <span class="code-type">PetState</span>.EXCELLENT;
+    }
+}</pre>
+  </div>
+</section>
+
+<!-- PATRONES NO APLICADOS -->
+<section id="no-aplicados">
+  <h2>Patrones que se decidió NO aplicar</h2>
+  <p>Tan importante como aplicar un patrón correctamente es justificar cuándo <em>no</em> aplicarlo.</p>
+
+  <div class="card">
+    <div class="card-header"><span class="badge badge-no">No aplicado</span><strong>Active Record en entidades</strong></div>
+    <p><strong>Idea propuesta:</strong> que las entidades tuvieran métodos <code>habit.save()</code> o <code>habit.delete()</code> para operar sobre sí mismas.</p>
+    <p><strong>Por qué se rechazó:</strong> viola SRP (la entidad tendría responsabilidad de persistencia además de representar datos) y DIP (la entidad dependería directamente de infraestructura — Spring ApplicationContext o repositorios). Hace el testing más complejo. El patrón Active Record es válido en frameworks como Rails donde el ORM está diseñado para eso; en JPA/Spring, la separación entity/repository es el enfoque correcto.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="badge badge-no">No aplicado</span><strong>Singleton explícito</strong></div>
+    <p>Todos los beans de Spring son singletons por defecto. No se necesita implementar el patrón manualmente — Spring lo gestiona.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="badge badge-no">No aplicado</span><strong>Decorator</strong></div>
+    <p>Se consideró para agregar multiplicadores de XP según el estado de la mascota (ej: EXCELLENT da +20% XP). Se descartó porque la lógica es simple y no hay suficientes variaciones que justifiquen la indirección. Se implementó como lógica directa en <code>PetService</code>.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="badge badge-no">No aplicado</span><strong>Chain of Responsibility</strong></div>
+    <p>Considerado para el pipeline de validación en check-ins (¿el hábito existe? ¿pertenece al usuario? ¿está activo? ¿ya hizo check-in hoy?). Descartado porque son 4 validaciones secuenciales simples — una cadena de handlers sería sobrengineering sin beneficio real de mantenibilidad.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="badge badge-no">No aplicado</span><strong>Lógica de negocio en entidades (Rich Domain Model)</strong></div>
+    <p>Se debatió si métodos como <code>pet.agregarXP()</code> o <code>habit.archivar()</code> debían vivir en las entidades. Se eligió el modelo anémico porque: (1) el testing es más limpio con servicios testeables por mocks, (2) las reglas de negocio más complejas (cálculo de wellness) no pertenecen naturalmente a ninguna entidad, y (3) las entidades JPA tienen ciclo de vida gestionado por Hibernate lo que puede crear comportamientos sorpresivos con lógica en métodos de instancia.</p>
+  </div>
+</section>
+
+<!-- TRADE-OFFS -->
+<section id="tradeoffs">
+  <h2>Trade-offs aceptados</h2>
+  <p>Decisiones donde se eligió la opción más simple sabiendo sus limitaciones, por tratarse de un proyecto universitario.</p>
+
+  <div class="card">
+    <div class="card-header"><span class="badge badge-tradeoff">Trade-off</span><strong>JWT en localStorage</strong></div>
+    <p><strong>Implementado:</strong> el token JWT se guarda en <code>localStorage</code> del browser.</p>
+    <p><strong>Riesgo aceptado:</strong> expuesto a ataques XSS — si un script malicioso corre en el browser, puede leer el token.</p>
+    <p><strong>Alternativa correcta para producción:</strong> HttpOnly cookies manejadas por el servidor — el token nunca es accesible desde JavaScript.</p>
+    <p><strong>Por qué se aceptó:</strong> simplifica enormemente el frontend para la demo universitaria. Documentado con comentario en el código.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="badge badge-tradeoff">Trade-off</span><strong>WebSocket con topic público por usuario</strong></div>
+    <p><strong>Implementado:</strong> <code>/topic/pet/{userId}</code> — cualquier cliente que conozca el userId puede suscribirse.</p>
+    <p><strong>Alternativa correcta:</strong> <code>convertAndSendToUser()</code> con autenticación WebSocket (ChannelInterceptor que valida el JWT en el frame STOMP CONNECT).</p>
+    <p><strong>Por qué se aceptó:</strong> la autenticación de WebSocket requiere configuración adicional significativa que no agrega valor pedagógico al proyecto. El principio de WebSocket en tiempo real se demuestra igualmente. Documentado con comentario en el código y en este reporte.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="badge badge-tradeoff">Trade-off</span><strong>HabitCategory como enum hardcodeado</strong></div>
+    <p><strong>Implementado:</strong> <code>enum HabitCategory { HEALTH, STUDY, SPORT, WELLNESS, NUTRITION }</code>.</p>
+    <p><strong>Alternativa escalable:</strong> tabla en base de datos o servicio de configuración — permite agregar/modificar categorías sin redespliegue.</p>
+    <p><strong>Por qué se aceptó:</strong> MVP universitario con categorías estables. Documentado con comentario en el enum.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="badge badge-tradeoff">Trade-off</span><strong>@CreationTimestamp/@UpdateTimestamp en lugar de @PrePersist</strong></div>
+    <p><strong>Problema técnico encontrado:</strong> cuando se asigna el ID manualmente antes de llamar a <code>repository.save()</code>, Spring Data JPA llama <code>merge()</code> en lugar de <code>persist()</code>, y <code>@PrePersist</code> no dispara.</p>
+    <p><strong>Solución correcta a largo plazo:</strong> implementar <code>Persistable&lt;String&gt;</code> en las entidades para que Spring Data siempre llame <code>persist()</code> para entidades nuevas.</p>
+    <p><strong>Solución implementada:</strong> <code>@CreationTimestamp</code> y <code>@UpdateTimestamp</code> de Hibernate, que funcionan independientemente del tipo de operación JPA.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="badge badge-tradeoff">Trade-off</span><strong>Flyway validate-on-migrate: false en perfil docker</strong></div>
+    <p><strong>Por qué existe:</strong> el script V2 fue modificado post-aplicación (corrección del hash BCrypt de los usuarios seed), lo que invalidó el checksum almacenado por Flyway.</p>
+    <p><strong>Práctica correcta:</strong> nunca modificar un script ya aplicado — crear un V3 de corrección. En este proyecto se hizo esto (V3__fix_seed_passwords.sql) pero el checksum de V2 quedó en estado inconsistente.</p>
+    <p><strong>Solución:</strong> <code>validate-on-migrate: false</code> en el perfil docker con comentario documentando el motivo. En producción se ejecutaría <code>flyway repair</code>.</p>
+  </div>
+</section>
+
+<!-- FLUJO COMPLETO -->
+<section id="flujo">
+  <h2>Flujo completo de un check-in</h2>
+
+  <div class="card">
+    <pre style="font-size:0.75rem">
+  Browser                  Backend                          DB
+    │                         │                              │
+    │  POST /api/records       │                              │
+    │  Authorization: Bearer   │                              │
+    │─────────────────────────►│                              │
+    │                         │  JwtAuthFilter: valida JWT    │
+    │                         │  → carga User en SecurityCtx  │
+    │                         │                              │
+    │                         │  RecordController.checkIn()  │
+    │                         │  → HabitService.findActiveByOwner()
+    │                         │  → SELECT habits WHERE id=? AND user_id=?
+    │                         │─────────────────────────────►│
+    │                         │                              │
+    │                         │  CompletionRecordRepo.existsByHabitIdAndDate()
+    │                         │─────────────────────────────►│
+    │                         │  → false (no existe hoy)     │
+    │                         │                              │
+    │                         │  CompletionRecordRepo.save() │
+    │                         │─────────────────────────────►│
+    │                         │  INSERT completion_records    │
+    │                         │                              │
+    │  201 Created ◄──────────│  publishEvent(CheckInCompletedEvent)
+    │                         │       │ @EventListener        │
+    │                         │       ▼                       │
+    │                         │  WellnessService             │
+    │                         │  → HabitService: hábitos activos
+    │                         │─────────────────────────────►│
+    │                         │  → RecordService: registros 7 días
+    │                         │─────────────────────────────►│
+    │                         │  → WellnessCalculator.calculate()
+    │                         │    (exponential weighted avg) │
+    │                         │  → PetService.updateWellness()
+    │                         │─────────────────────────────►│
+    │                         │  UPDATE pets SET state=?, xp=?│
+    │                         │                              │
+    │                         │  → PetWebSocketGateway.notify()
+    │                         │                              │
+    │  STOMP /topic/pet/{id}  │                              │
+    │◄────────────────────────│  { state, xp, level, score } │
+    │                         │                              │
+    │  UI actualiza mascota   │                              │
+    │  sin recargar página    │                              │</pre>
+  </div>
+</section>
+
+<!-- TESTS -->
+<section id="tests">
+  <h2>Tests unitarios</h2>
+
+  <table class="compare">
+    <tr><th>Suite</th><th>Tests</th><th>Qué verifica</th></tr>
+    <tr><td><code>AuthServiceTest</code></td><td>6</td><td>Register (happy path, email dup, timezone default) · Login (happy path, no existe, wrong password)</td></tr>
+    <tr><td><code>HabitServiceTest</code></td><td>8</td><td>Create (bajo límite, en límite, sobre límite) · ListActive (con hábitos, vacío) · Archive (success, not found, otro usuario)</td></tr>
+    <tr><td><code>RecordServiceTest</code></td><td>10</td><td>CheckIn (happy path, duplicate, not found) · Verifica que el evento se publica · Verifica userId correcto · Verifica orden de llamadas con InOrder</td></tr>
+    <tr><td><code>ExponentialWeightedWellnessCalculatorTest</code></td><td>10</td><td>Sin hábitos → 0 · Todo completado → ~100 · Nada completado → ~0 · La ponderación exponencial da más peso a días recientes</td></tr>
+    <tr><td><code>WellnessServiceTest</code></td><td>8</td><td>Evento dispara cálculo · Se llama a PetService · Se propaga userId correcto · Se usa fecha del evento</td></tr>
+  </table>
+
+  <div class="callout callout-info">
+    <div class="callout-title">Filosofía de testing</div>
+    Se testeó <strong>comportamiento</strong>, no implementación. Los tests de <code>ExponentialWeightedWellnessCalculator</code> no mockean nada — validan el algoritmo directamente. Los tests de servicios validan las interacciones entre componentes con mocks de sus dependencias.
+  </div>
+
+  <details>
+    <summary>Decisión: no tests de integración con base de datos</summary>
+    <div class="details-body">
+      <p>Los tests unitarios con mocks son rápidos y suficientes para validar la lógica de negocio en este MVP. Los tests de integración con base de datos real (usando <code>@DataJpaTest</code> + Testcontainers) son el siguiente paso lógico pero están fuera del alcance de esta entrega.</p>
+    </div>
+  </details>
+</section>
+
+</main>
+</div>
+
+<script>
+  // Active nav link on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const links = document.querySelectorAll('nav a');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`nav a[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+
+  // Smooth scroll
+  links.forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const id = link.getAttribute('href').slice(1);
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+</script>
+</body>
+</html>

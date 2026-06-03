@@ -1,4 +1,4 @@
-.PHONY: up down logs clean reset seed status build up-detached
+.PHONY: up down logs clean reset seed status build up-detached dev
 
 up:           ## Levanta el sistema (construye imágenes si es necesario)
 	docker compose up --build
@@ -26,3 +26,6 @@ seed:         ## Fuerza re-poblado (borra DB y la rearma con seed data)
 
 build:        ## Solo construye imágenes sin arrancar
 	docker compose build
+
+dev:          ## Modo desarrollo: hot reload del backend sin rebuildar imagen
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build

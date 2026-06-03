@@ -35,8 +35,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-habitpet}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-habitpet}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-habitpet}
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-prod}
+      JWT_SECRET: ${JWT_SECRET:-habitpet-dev-secret-key-for-local-development-only-32x}
       APP_SEED_ENABLED: ${APP_SEED_ENABLED:-true}
+      APP_SECURITY_DISABLED: ${APP_SECURITY_DISABLED:-false}
     depends_on:
       postgres:
         condition: service_healthy
@@ -54,6 +55,9 @@ services:
     environment:
       VITE_API_URL: http://localhost:8080
       VITE_WS_URL: ws://localhost:8080/ws
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     depends_on:
       - backend
     networks:
