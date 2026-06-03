@@ -139,6 +139,7 @@
     <li><a href="#ocp">OCP — Open/Closed</a></li>
     <li><a href="#srp">SRP — Single Responsibility</a></li>
     <li><a href="#dip">DIP — Dependency Inversion</a></li>
+    <li><a href="#springboot-compose">@SpringBootApplication + DIP</a></li>
     <li><a href="#lsp">LSP + ISP</a></li>
     <div class="section-label">Principios GRASP</div>
     <li><a href="#grasp">Alta Cohesión · Polimorfismo</a></li>
@@ -504,6 +505,40 @@
     La inyección por campo (<code>@Autowired</code>) hace las dependencias implícitas y dificulta el testing (no se puede crear el objeto sin un contexto de Spring). La inyección por constructor hace las dependencias explícitas, permite tests con simples <code>new Service(mockRepo)</code>, y garantiza que el objeto es inmutable después de crearse.
   </div>
 </section>
+
+  <!-- @SpringBootApplication Composite + DIP -->
+    <h2>Anotación compuesta + DIP en Spring Boot</h2>
+
+    <div class="card">
+      <div class="card-header"><span class="badge badge-solid">SOLID — DIP</span><strong>@SpringBootApplication como anotación compuesta</strong></div>
+      <p><code>@SpringBootApplication</code> no es una sola anotación — es una <strong>meta-anotación</strong> que compone tres responsabilidades en una sola declaración:</p>
+      <pre><span class="code-comment">// Lo que @SpringBootApplication realmente es:</span>
+<span class="code-annotation">@Configuration</span>         <span class="code-comment">// esta clase define beans de Spring</span>
+<span class="code-annotation">@EnableAutoConfiguration</span> <span class="code-comment">// activa la auto-configuración de Spring Boot</span>
+<span class="code-annotation">@ComponentScan</span>          <span class="code-comment">// escanea paquetes en busca de @Component, @Service, etc.</span>
+
+<span class="code-comment">// En el proyecto — con exclusión explícita:</span>
+<span class="code-annotation">@SpringBootApplication</span>(exclude = {<span class="code-type">UserDetailsServiceAutoConfiguration</span>.class})
+<span class="code-keyword">public class</span> <span class="code-type">HabitPetApplication</span> { ... }</pre>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span class="badge badge-solid">SOLID — DIP</span><strong>Por qué se excluye UserDetailsServiceAutoConfiguration</strong></div>
+      <p>Spring Security, al detectarse en el classpath, auto-configura un <code>UserDetailsService</code> por defecto que genera una contraseña random al arrancar. Esto sirve para aplicaciones que usan el sistema de login de formularios de Spring.</p>
+      <p>En HabitPet la autenticación es completamente nuestra — el <code>JwtAuthFilter</code> valida el token JWT y carga el usuario manualmente en el <code>SecurityContext</code>, sin depender del mecanismo de Spring. No necesitamos ni queremos ese servicio por defecto.</p>
+      <p>Al excluirlo, aplicamos <strong>DIP</strong>: en lugar de depender de la implementación de autenticación que Spring Boot provee por convención, definimos la nuestra propia. Le decimos explícitamente a Spring: "no necesito tu <code>UserDetailsService</code>, tengo mi propio mecanismo".</p>
+
+      <div class="callout callout-info">
+        <div class="callout-title">Sin la exclusión</div>
+        Al arrancar el backend aparece en los logs: <code>Using generated security password: 4a142bf7-...</code> junto con una advertencia de seguridad. Con la exclusión ese mensaje desaparece y el sistema queda limpio.
+      </div>
+
+      <div class="callout callout-success">
+        <div class="callout-title">Concepto: Convention over Configuration</div>
+        Spring Boot usa el principio de "convención sobre configuración" — por defecto hace muchas cosas automáticamente. El <code>exclude</code> es la forma de decirle "en este punto específico, quiero mi propia configuración en lugar de la convención".
+      </div>
+    </div>
+  </section>
 
 <!-- LSP + ISP -->
 <section id="lsp">
