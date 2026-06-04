@@ -1,6 +1,9 @@
-# Frontend — HabitPet
+# Frontend - HabitPet
 
-React 18 + TypeScript + Vite + Tailwind CSS.
+React 18 + TypeScript + Vite + Tailwind CSS + MUI.
+
+La pantalla actual consume la API del módulo `vidification` y traslada la experiencia de consola a
+un dashboard web: avatar, vitalidad, hábitos diarios, completar hábito y terminar día.
 
 ## Estructura
 
@@ -28,7 +31,7 @@ npm install
 npm run dev
 
 # Build producción
-npm build
+npm run build
 
 # Preview
 npm run preview
@@ -47,3 +50,23 @@ docker compose up --build frontend
 ```
 
 El frontend estará disponible en `http://localhost:5173`.
+
+## Vidification UI
+
+Para ver el dashboard con datos reales, levantá primero la API de `vidification` en el puerto 8080:
+
+```bash
+cd ../vidification
+./mvnw spring-boot:run
+```
+
+En otra terminal:
+
+```bash
+cd ../frontend
+npm install
+npm run dev
+```
+
+Abrí `http://localhost:5173`. Vite proxya `/api` hacia `http://localhost:8080`, así que no hace
+falta cambiar CORS en el backend.
