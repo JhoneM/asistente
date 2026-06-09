@@ -34,6 +34,14 @@ public class HabitController {
         return ResponseEntity.ok(habitService.listActive(currentUser.getId()));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<HabitResponse> update(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable String id,
+            @Valid @RequestBody CreateHabitRequest request) {
+        return ResponseEntity.ok(habitService.update(currentUser.getId(), id, request));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> archive(
             @AuthenticationPrincipal User currentUser,

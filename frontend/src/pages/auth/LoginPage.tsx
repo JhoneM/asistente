@@ -1,10 +1,12 @@
 import { useState, FormEvent } from 'react'
 import { useAuthStore } from '../../store/authStore'
-import { login } from '../../services/api/authApi'
+import { login, register } from '../../services/api/authApi'
 
 export function LoginPage() {
+  const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const loginStore = useAuthStore(s => s.login)
@@ -14,24 +16,52 @@ export function LoginPage() {
     setError(null)
     setLoading(true)
     try {
-      const data = await login({ email, password })
+      const data = mode === 'login'
+        ? await login({ email, password })
+        : await register({
+            email,
+            password,
+            displayName,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC',
+          })
       loginStore(data.token, data.userId, data.email, data.displayName)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      setError(err instanceof Error ? err.message : 'Request failed')
     } finally {
       setLoading(false)
     }
   }
 
+  const toggleMode = () => {
+    setMode(current => current === 'login' ? 'register' : 'login')
+    setError(null)
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 flex items-center justify-center">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-amber-50 flex items-center justify-center px-4">
+      <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-indigo-700">HabitPet</h1>
-          <p className="text-gray-500 mt-1">Your habits. Your pet. Your progress.</p>
+          <h1 className="text-3xl font-bold text-emerald-700">HabitPet</h1>
+          <p className="text-gray-500 mt-1">
+            {mode === 'login' ? 'Your habits. Your pet. Your progress.' : 'Create your pet and start today.'}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === 'register' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Display name</label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
+                placeholder="Your name"
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:outline-none"
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
@@ -40,7 +70,7 @@ export function LoginPage() {
               onChange={e => setEmail(e.target.value)}
               placeholder="demo@habitpet.com"
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:outline-none"
             />
           </div>
 
@@ -52,7 +82,8 @@ export function LoginPage() {
               onChange={e => setPassword(e.target.value)}
               placeholder="demo1234"
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+              minLength={6}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:outline-none"
             />
           </div>
 
@@ -65,14 +96,22 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg transition disabled:opacity-50"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg transition disabled:opacity-50"
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Please wait...' : mode === 'login' ? 'Login' : 'Create account'}
           </button>
         </form>
 
+        <button
+          type="button"
+          onClick={toggleMode}
+          className="w-full text-sm text-emerald-600 hover:text-emerald-800 mt-4"
+        >
+          {mode === 'login' ? 'Need an account? Register' : 'Already have an account? Login'}
+        </button>
+
         <p className="text-center text-xs text-gray-400 mt-6">
-          Demo users: demo@habitpet.com · maria@habitpet.com · lucas@habitpet.com<br />
+          Demo users: demo@habitpet.com | maria@habitpet.com | lucas@habitpet.com<br />
           Password: demo1234
         </p>
       </div>

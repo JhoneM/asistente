@@ -87,6 +87,29 @@ public class HabitService {
     }
 
     /**
+     * Updates an active habit owned by the authenticated user.
+     *
+     * @param userId  authenticated user identifier
+     * @param habitId identifier of the habit to update
+     * @param request new habit data
+     * @return updated habit
+     */
+    @Transactional
+    public HabitResponse update(String userId, String habitId, CreateHabitRequest request) {
+        Habit habit = findActiveByOwner(userId, habitId);
+
+        habit.setName(request.name());
+        habit.setDescription(request.description());
+        habit.setCategory(request.category());
+        habit.setWeeklyFrequency(request.weeklyFrequency());
+
+        habitRepository.save(habit);
+        log.info("Habit updated: habitId={}, userId={}", habitId, userId);
+
+        return toResponse(habit);
+    }
+
+    /**
      * Returns an active habit that belongs to the given user.
      * Used by RecordService to validate ownership and active status before check-in.
      *

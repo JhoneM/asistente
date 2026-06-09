@@ -58,7 +58,7 @@ public class RecordService {
         CompletionRecord saved = recordRepository.save(record);
         log.info("Check-in recorded: habitId={}, userId={}, date={}", habit.getId(), userId, today);
 
-        eventPublisher.publishEvent(new CheckInCompletedEvent(userId, today));
+        eventPublisher.publishEvent(new CheckInCompletedEvent(userId, today, habit.getId()));
 
         return toResponse(saved, habit.getId());
     }

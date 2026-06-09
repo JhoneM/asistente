@@ -6,6 +6,7 @@ import com.habitpet.dtos.RegisterRequest;
 import com.habitpet.exceptions.InvalidCredentialsException;
 import com.habitpet.exceptions.ResourceAlreadyExistsException;
 import com.habitpet.models.User;
+import com.habitpet.repositories.PetRepository;
 import com.habitpet.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,8 +22,10 @@ import java.util.UUID;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final PetRepository petRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final PetFactory petFactory;
 
     /**
      * Registers a new user in the system.
@@ -48,6 +51,7 @@ public class AuthService {
         user.setTimezone(request.timezone());
 
         userRepository.save(user);
+        petRepository.save(petFactory.createDefaultFor(user));
         log.info("User registered: userId={}", user.getId());
 
         String token = jwtService.generateToken(user.getId());

@@ -57,7 +57,7 @@ Vincular el progreso de hábitos a una entidad virtual con la que el usuario des
 1. Tiempo de respuesta menor a 200ms para operaciones CRUD en condiciones normales
 2. Disponibilidad del 99% durante horario académico (8:00–22:00)
 3. Soporte para al menos 50 usuarios concurrentes (contexto universitario)
-4. Autenticación segura mediante JWT con access token (15 min) y refresh token (7 días)
+4. Autenticación segura mediante JWT; objetivo final: access token corto (15 min) y refresh token (7 días)
 5. Interfaz responsiva para desktop y dispositivos móviles
 6. Cobertura de tests unitarios mayor al 70% en el backend
 7. El código debe seguir principios SOLID, patrones GRASP y patrones de diseño GoF justificados
@@ -100,7 +100,7 @@ Vincular el progreso de hábitos a una entidad virtual con la que el usuario des
 | Frontend        | React 18 + TypeScript           | Ecosistema maduro, tipado estático, modelo de componentes ideal para la mascota reactiva         |
 | Estilos         | TailwindCSS                     | Velocidad de desarrollo en MVP, responsive por defecto, sin overhead de CSS en bundle            |
 | Estado global   | Zustand                         | Más liviano que Redux, boilerplate mínimo, suficiente para el tamaño del MVP                     |
-| Backend         | Spring Boot 3.x (Java 21)       | Inyección de dependencias nativa facilita SOLID/DI; módulos por dominio alineados con DDD; ecosistema maduro |
+| Backend         | Spring Boot 3.x (Java 21)       | Inyección de dependencias nativa facilita SOLID/DI; monolito por capas con servicios del dominio; ecosistema maduro |
 | Base de datos   | PostgreSQL                       | Modelo relacional con integridad referencial; consultas de agregación eficientes para estadísticas |
 | ORM             | Spring Data JPA + Hibernate     | Integración nativa con Spring Boot; anotaciones JPA type-safe; migraciones con Flyway            |
 | Tiempo real     | Spring WebSocket (STOMP/SockJS) | Soporte nativo en Spring Boot; STOMP simplifica el protocolo de mensajería sobre WebSocket       |
@@ -111,10 +111,11 @@ Vincular el progreso de hábitos a una entidad virtual con la que el usuario des
 
 ### 5.2. Arquitectura General
 
-El backend sigue una **arquitectura de capas (Layered Architecture)** con módulos organizados según principios de **Domain-Driven Design (DDD)**. Esta combinación fue elegida porque:
+El backend sigue una **arquitectura de capas (Layered Architecture)**. La propuesta académica original planteaba módulos DDD por dominio; la implementación actual organiza el código por capas técnicas (`controllers`, `services`, `models`, `repositories`, `dtos`, `exceptions`, `configs`, `websockets`, `events`) y concentra la separación de dominio en nombres de entidades, servicios y casos de uso.
 
 - Layered Architecture es el patrón más enseñado en contextos académicos y facilita la evaluación
-- DDD alinea los módulos con los conceptos del dominio (Habit, Pet, CompletionRecord) en lugar de agrupaciones técnicas
+- Los conceptos de dominio principales siguen explícitos en el código (Habit, Pet, CompletionRecord, WellnessScore, HabitService, RecordService, PetService)
+- La evolución a paquetes por dominio sigue siendo posible si el proyecto crece, pero no debe asumirse como estructura actual
 - La separación en capas soporta naturalmente los principios SOLID, especialmente SRP y DIP
 
 **Capas del Backend:**
@@ -137,16 +138,16 @@ El backend sigue una **arquitectura de capas (Layered Architecture)** con módul
 
 ### 5.3. Módulos del Sistema
 
-| Módulo        | Responsabilidad                                                         |
-|---------------|-------------------------------------------------------------------------|
-| AuthModule    | Registro, login, generación y validación de JWT, refresh token          |
-| UserModule    | Gestión del perfil del usuario                                          |
-| HabitModule   | CRUD de hábitos, validaciones de dominio                                |
-| RecordModule  | Registro de cumplimiento diario, reglas de negocio (una vez por día)    |
-| PetModule     | Estado de la mascota, cálculo de bienestar, sistema de niveles          |
-| StatsModule   | Cálculo de estadísticas (racha, porcentaje semanal, historial)          |
-| NotificationModule | Notificaciones in-app, criterios de disparo                        |
-| WebSocketModule | Gateway de tiempo real, broadcasting de eventos de mascota            |
+| Módulo        | Responsabilidad                                      | Estado actual |
+|---------------|------------------------------------------------------|---------------|
+| AuthModule    | Registro, login, generación y validación de JWT      | Implementado sin refresh token real |
+| UserModule    | Gestión del perfil del usuario                       | Parcial: entidad User y usuario autenticado |
+| HabitModule   | CRUD de hábitos, validaciones de dominio             | Implementado: crear, listar, editar y archivar |
+| RecordModule  | Registro de cumplimiento diario, una vez por día     | Implementado |
+| PetModule     | Estado de mascota, bienestar, XP y niveles           | Implementado con Factory simple y Decorator de XP |
+| StatsModule   | Racha, porcentaje semanal, historial                 | Pendiente |
+| NotificationModule | Notificaciones in-app, criterios de disparo     | Parcial: tabla/seed; falta API/UI |
+| WebSocketModule | Gateway de tiempo real para eventos de mascota     | Implementado con topic público por usuario para demo |
 
 ---
 
@@ -170,6 +171,8 @@ El backend sigue una **arquitectura de capas (Layered Architecture)** con módul
 ## 7. Criterios de Aceptación del MVP
 
 **CA-01 (Autenticación)**: El usuario puede registrarse, iniciar sesión y su sesión persiste mediante refresh token. El access token expira en 15 minutos. Las contraseñas se almacenan con bcrypt (mínimo 10 rounds).
+
+> Estado actual: registro y login backend/frontend con JWT stateless están implementados; al registrarse se crea una mascota inicial con `PetFactory`. Refresh token, expiración de 15 minutos y cookie HttpOnly siguen pendientes. En la configuración actual el JWT expira en 24 horas y el frontend lo guarda en `localStorage` por simplicidad de demo.
 
 **CA-02 (Hábitos)**: El usuario puede crear hasta 10 hábitos en el MVP. Cada hábito tiene: nombre (obligatorio, máx. 100 chars), categoría (enum: HEALTH, STUDY, SPORT, WELLNESS, NUTRITION), frecuencia semanal (1-7 días) y descripción (opcional).
 
@@ -211,9 +214,11 @@ Desventaja aceptada: sin notificaciones push nativas. Se mitiga con notificacion
 
 ### 9.2. Monolito vs Microservicios
 
-Se eligió **monolito modular (paquetes por dominio en Spring Boot)** porque:
+Se eligió **monolito modular** porque:
 - Los microservicios introducen complejidad operacional (service discovery, comunicación entre servicios, tracing distribuido) que no está justificada para el tamaño del dominio
 - Un monolito modular bien estructurado puede descomponerse en microservicios si escala, sin reescribir la lógica de negocio
+
+> Estado actual: el repositorio implementa un monolito por capas. La separación en paquetes por dominio (`com.habitpet.habit`, `com.habitpet.pet`, `com.habitpet.record`) queda como evolución posible, no como estructura presente.
 
 ### 9.3. MongoDB vs PostgreSQL
 
@@ -233,7 +238,7 @@ Se eligió **Zustand** porque:
 
 Se eligió **Spring Boot 3.x con Java 21** porque:
 - La inyección de dependencias del contenedor IoC de Spring facilita la aplicación del principio DIP (Dependency Inversion) de SOLID de forma nativa
-- La organización en paquetes por dominio alinea con DDD: `com.habitpet.habit`, `com.habitpet.pet`, `com.habitpet.record`
+- La organización actual por capas permite una evolución posterior a paquetes por dominio si el alcance crece
 - Spring Data JPA implementa el patrón Repository sin boilerplate, con interfaces tipadas
 - Java 21 ofrece records inmutables (ideales para Value Objects como `WellnessScore`) y mejoras en pattern matching
 - Integración nativa con SpringDoc OpenAPI para documentación automática de la API REST

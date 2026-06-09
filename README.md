@@ -10,19 +10,20 @@ Proyecto universitario — UADE.
 
 1. [Sobre el proyecto](#sobre-el-proyecto)
 2. [Cómo funciona](#cómo-funciona)
-3. [Stack técnico](#stack-técnico)
-4. [Arquitectura](#arquitectura)
-5. [Requisitos previos](#requisitos-previos)
-6. [Primera vez (arranque inicial)](#primera-vez-arranque-inicial)
-7. [Encender el sistema después de la primera vez](#encender-el-sistema-después-de-la-primera-vez)
-8. [Comandos útiles](#comandos-útiles)
-9. [Modo desarrollo con hot reload](#modo-desarrollo-con-hot-reload)
-10. [Usuarios de prueba](#usuarios-de-prueba)
-11. [URLs del sistema](#urls-del-sistema)
-12. [Estructura del proyecto](#estructura-del-proyecto)
-13. [Persistencia de datos](#persistencia-de-datos)
-14. [Documentación](#documentación)
-15. [Resolución de problemas](#resolución-de-problemas)
+3. [Estado actual](#estado-actual)
+4. [Stack técnico](#stack-técnico)
+5. [Arquitectura](#arquitectura)
+6. [Requisitos previos](#requisitos-previos)
+7. [Primera vez (arranque inicial)](#primera-vez-arranque-inicial)
+8. [Encender el sistema después de la primera vez](#encender-el-sistema-después-de-la-primera-vez)
+9. [Comandos útiles](#comandos-útiles)
+10. [Modo desarrollo con hot reload](#modo-desarrollo-con-hot-reload)
+11. [Usuarios de prueba](#usuarios-de-prueba)
+12. [URLs del sistema](#urls-del-sistema)
+13. [Estructura del proyecto](#estructura-del-proyecto)
+14. [Persistencia de datos](#persistencia-de-datos)
+15. [Documentación](#documentación)
+16. [Resolución de problemas](#resolución-de-problemas)
 
 ---
 
@@ -52,6 +53,23 @@ Para detalles formales del proyecto, ver [docs/RFC.md](./docs/RFC.md).
 
 ---
 
+## Estado actual
+
+El repositorio ya contiene una demo funcional end-to-end del flujo principal: login, dashboard, listado de hábitos, check-in diario, recálculo de bienestar y actualización de mascota por WebSocket.
+
+| Área | Estado |
+|---|---|
+| Documentación académica | Completa, con RFC, arquitectura, modelo de dominio, ADRs, SOLID/GRASP y patrones |
+| Backend base | Implementado con Spring Boot, seguridad JWT, JPA, Flyway, WebSocket y tests unitarios |
+| Auth | Registro y login backend/frontend con JWT stateless; falta refresh token real y cookies HttpOnly |
+| Hábitos | Crear, listar, editar y archivar |
+| Records + mascota | Check-in diario, regla de duplicado, wellness score, XP con bonus por frecuencia, niveles y broadcast STOMP |
+| Frontend | Demo con login/registro, dashboard, mascota, gestión de hábitos y check-in; faltan estadísticas y notificaciones |
+| Datos de prueba | Tres usuarios precargados con hábitos, registros, mascotas y notificaciones seed |
+| Encoding | Archivos revisados como UTF-8; si PowerShell muestra caracteres rotos, es un problema de salida de consola |
+
+---
+
 ## Stack técnico
 
 | Capa | Tecnología |
@@ -65,7 +83,7 @@ Para detalles formales del proyecto, ver [docs/RFC.md](./docs/RFC.md).
 | Build | Maven (backend), npm + Vite (frontend) |
 | Contenedores | Docker + Docker Compose |
 | Documentación API | SpringDoc OpenAPI (Swagger UI) |
-| Tests | JUnit 5 + Mockito + AssertJ (42 tests unitarios) |
+| Tests | JUnit 5 + Mockito + AssertJ (46 tests unitarios) |
 
 Cada decisión técnica está justificada en `docs/ADR/`.
 
@@ -136,7 +154,7 @@ Solo necesitás tener instalado:
 
 ```bash
 git clone <url-del-repo>
-cd asistente-virtual
+cd asistente-develop
 ```
 
 ### 2. Crear el archivo de variables de entorno
@@ -279,7 +297,7 @@ Cada usuario tiene 3–5 hábitos con 14 días de historial de check-ins.
 ## Estructura del proyecto
 
 ```
-asistente-virtual/
+asistente-develop/
 ├── frontend/                    React 18 + Vite + TypeScript
 │   ├── src/
 │   │   ├── pages/auth/          LoginPage
@@ -308,7 +326,7 @@ asistente-virtual/
 │   │   ├── application.yml
 │   │   ├── application-docker.yml
 │   │   └── db/migration/        V1__schema, V2__seed, V3__fix_passwords
-│   ├── src/test/                42 tests unitarios
+│   ├── src/test/                46 tests unitarios
 │   ├── Dockerfile               Producción (multi-stage Maven → JRE)
 │   └── Dockerfile.dev           Desarrollo (spring-boot:run + hot reload)
 │

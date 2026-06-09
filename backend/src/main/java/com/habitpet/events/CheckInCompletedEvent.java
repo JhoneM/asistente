@@ -9,4 +9,9 @@ import java.time.LocalDate;
  * who listens. WellnessService subscribes to trigger wellness recalculation.
  * This decouples the check-in flow from the wellness calculation flow.
  */
-public record CheckInCompletedEvent(String userId, LocalDate date) {}
+public record CheckInCompletedEvent(String userId, LocalDate date, String habitId) {
+
+    public CheckInCompletedEvent(String userId, LocalDate date) {
+        this(userId, date, null);
+    }
+}

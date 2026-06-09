@@ -5,6 +5,13 @@ export interface LoginRequest {
   password: string
 }
 
+export interface RegisterRequest {
+  email: string
+  password: string
+  displayName: string
+  timezone: string
+}
+
 export interface AuthResponse {
   token: string
   userId: string
@@ -22,6 +29,21 @@ export async function login(request: LoginRequest): Promise<AuthResponse> {
   if (!response.ok) {
     const error = await response.json()
     throw new Error(error.message ?? 'Login failed')
+  }
+
+  return response.json()
+}
+
+export async function register(request: RegisterRequest): Promise<AuthResponse> {
+  const response = await fetch(`${API_BASE}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message ?? 'Registration failed')
   }
 
   return response.json()

@@ -58,14 +58,14 @@ class WellnessServiceTest {
         when(habitService.listActiveHabits(userId)).thenReturn(activeHabits);
         when(recordService.getRecentRecords(userId, 7)).thenReturn(recentRecords);
         when(wellnessCalculator.calculate(activeHabits, recentRecords, today)).thenReturn(expectedScore);
-        when(petService.updateWellness(userId, expectedScore)).thenReturn(updatedPet);
+        when(petService.updateWellness(userId, expectedScore, habit)).thenReturn(updatedPet);
 
         wellnessService.onCheckInCompleted(event);
 
         verify(habitService).listActiveHabits(userId);
         verify(recordService).getRecentRecords(userId, 7);
         verify(wellnessCalculator).calculate(activeHabits, recentRecords, today);
-        verify(petService).updateWellness(userId, expectedScore);
+        verify(petService).updateWellness(userId, expectedScore, habit);
     }
 
     @Test
@@ -81,12 +81,12 @@ class WellnessServiceTest {
         when(habitService.listActiveHabits(userId)).thenReturn(emptyHabits);
         when(recordService.getRecentRecords(userId, 7)).thenReturn(emptyRecords);
         when(wellnessCalculator.calculate(emptyHabits, emptyRecords, today)).thenReturn(zeroScore);
-        when(petService.updateWellness(userId, zeroScore)).thenReturn(updatedPet);
+        when(petService.updateWellness(userId, zeroScore, null)).thenReturn(updatedPet);
 
         wellnessService.onCheckInCompleted(event);
 
         verify(wellnessCalculator).calculate(emptyHabits, emptyRecords, today);
-        verify(petService).updateWellness(userId, zeroScore);
+        verify(petService).updateWellness(userId, zeroScore, null);
     }
 
     @Test
@@ -102,7 +102,7 @@ class WellnessServiceTest {
         when(habitService.listActiveHabits(userId)).thenReturn(List.of(habit));
         when(recordService.getRecentRecords(userId, 7)).thenReturn(List.of(record));
         when(wellnessCalculator.calculate(any(), any(), eq(today))).thenReturn(score);
-        when(petService.updateWellness(userId, score)).thenReturn(updatedPet);
+        when(petService.updateWellness(userId, score, habit)).thenReturn(updatedPet);
 
         wellnessService.onCheckInCompleted(event);
 
@@ -114,7 +114,7 @@ class WellnessServiceTest {
         verify(recordService).getRecentRecords(userIdCaptor.capture(), eq(7));
         assertThat(userIdCaptor.getValue()).isEqualTo(userId);
 
-        verify(petService).updateWellness(userIdCaptor.capture(), eq(score));
+        verify(petService).updateWellness(userIdCaptor.capture(), eq(score), eq(habit));
         assertThat(userIdCaptor.getValue()).isEqualTo(userId);
     }
 
@@ -138,7 +138,7 @@ class WellnessServiceTest {
         when(habitService.listActiveHabits(userId)).thenReturn(activeHabits);
         when(recordService.getRecentRecords(userId, 7)).thenReturn(recentRecords);
         when(wellnessCalculator.calculate(activeHabits, recentRecords, today)).thenReturn(score);
-        when(petService.updateWellness(userId, score)).thenReturn(updatedPet);
+        when(petService.updateWellness(userId, score, habit1)).thenReturn(updatedPet);
 
         wellnessService.onCheckInCompleted(event);
 
@@ -163,7 +163,7 @@ class WellnessServiceTest {
         when(habitService.listActiveHabits(userId)).thenReturn(activeHabits);
         when(recordService.getRecentRecords(userId, 7)).thenReturn(records);
         when(wellnessCalculator.calculate(activeHabits, records, eventDate)).thenReturn(score);
-        when(petService.updateWellness(userId, score)).thenReturn(updatedPet);
+        when(petService.updateWellness(userId, score, habit)).thenReturn(updatedPet);
 
         wellnessService.onCheckInCompleted(event);
 
@@ -181,7 +181,7 @@ class WellnessServiceTest {
         when(habitService.listActiveHabits(userId)).thenReturn(new ArrayList<>());
         when(recordService.getRecentRecords(userId, 7)).thenReturn(new ArrayList<>());
         when(wellnessCalculator.calculate(any(), any(), any())).thenReturn(WellnessScore.of(0.0));
-        when(petService.updateWellness(any(), any())).thenReturn(buildPet("pet-window"));
+        when(petService.updateWellness(any(), any(), any())).thenReturn(buildPet("pet-window"));
 
         wellnessService.onCheckInCompleted(event);
 
@@ -204,12 +204,12 @@ class WellnessServiceTest {
         when(habitService.listActiveHabits(userId)).thenReturn(List.of(habit));
         when(recordService.getRecentRecords(userId, 7)).thenReturn(List.of(record));
         when(wellnessCalculator.calculate(any(), any(), any())).thenReturn(highScore);
-        when(petService.updateWellness(userId, highScore)).thenReturn(updatedPet);
+        when(petService.updateWellness(userId, highScore, habit)).thenReturn(updatedPet);
 
         wellnessService.onCheckInCompleted(event);
 
         ArgumentCaptor<WellnessScore> scoreCaptor = ArgumentCaptor.forClass(WellnessScore.class);
-        verify(petService).updateWellness(eq(userId), scoreCaptor.capture());
+        verify(petService).updateWellness(eq(userId), scoreCaptor.capture(), eq(habit));
 
         assertThat(scoreCaptor.getValue().value()).isEqualTo(95.5);
     }
@@ -228,12 +228,12 @@ class WellnessServiceTest {
         when(habitService.listActiveHabits(userId)).thenReturn(activeHabits);
         when(recordService.getRecentRecords(userId, 7)).thenReturn(records);
         when(wellnessCalculator.calculate(activeHabits, records, today)).thenReturn(lowScore);
-        when(petService.updateWellness(userId, lowScore)).thenReturn(updatedPet);
+        when(petService.updateWellness(userId, lowScore, habit)).thenReturn(updatedPet);
 
         wellnessService.onCheckInCompleted(event);
 
         ArgumentCaptor<WellnessScore> scoreCaptor = ArgumentCaptor.forClass(WellnessScore.class);
-        verify(petService).updateWellness(eq(userId), scoreCaptor.capture());
+        verify(petService).updateWellness(eq(userId), scoreCaptor.capture(), eq(habit));
 
         assertThat(scoreCaptor.getValue().value()).isEqualTo(15.0);
     }

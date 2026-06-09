@@ -1,6 +1,7 @@
 package com.habitpet.services;
 
 import com.habitpet.exceptions.ResourceNotFoundException;
+import com.habitpet.models.Habit;
 import com.habitpet.models.Pet;
 import com.habitpet.models.PetState;
 import com.habitpet.models.WellnessScore;
@@ -15,11 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class PetService {
 
-    private static final int XP_PER_CHECK_IN = 10;
     private static final int[] XP_THRESHOLDS = {0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700};
     private static final int MAX_LEVEL = 10;
 
     private final PetRepository petRepository;
+    private final XpRewardCalculator xpRewardCalculator;
 
     /**
      * Updates the pet state and accumulates XP based on the new wellness score.
@@ -31,7 +32,7 @@ public class PetService {
      * @throws ResourceNotFoundException if the user has no pet
      */
     @Transactional
-    public Pet updateWellness(String userId, WellnessScore score) {
+    public Pet updateWellness(String userId, WellnessScore score, Habit completedHabit) {
         Pet pet = petRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                     "Pet not found",
@@ -42,7 +43,7 @@ public class PetService {
         PetState newState = score.toState();
 
         pet.setState(newState);
-        pet.setXp(pet.getXp() + XP_PER_CHECK_IN);
+        pet.setXp(pet.getXp() + xpRewardCalculator.calculate(completedHabit));
         pet.setLevel(calculateLevel(pet.getXp()));
 
         petRepository.save(pet);
@@ -53,6 +54,10 @@ public class PetService {
         }
 
         return pet;
+    }
+
+    public Pet updateWellness(String userId, WellnessScore score) {
+        return updateWellness(userId, score, null);
     }
 
     /**

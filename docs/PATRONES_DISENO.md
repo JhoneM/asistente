@@ -1,5 +1,7 @@
 # Patrones de Diseño en HabitPet
 
+> Estado actual del código: para el alcance MVP se mantienen patrones simples y concretos. Están implementados Strategy (`WellnessCalculator`), Observer (`CheckInCompletedEvent` + `WellnessService`), Facade (`WellnessService` como orquestador), Repository (Spring Data JPA), Factory simple (`PetFactory`) y Decorator (`FrequencyBonusXpDecorator`). Patrones más pesados o no necesarios para la demo quedan descartados para no sobrediseñar.
+
 Este documento describe los patrones de diseño GoF aplicados en HabitPet, con su justificación, diagrama UML y ejemplo de código Java con Spring Boot 3.x concreto del proyecto. Para cada patrón se explica el problema específico que resuelve en este sistema.
 
 ---
@@ -591,9 +593,44 @@ class PetServiceTest {
 
 ---
 
-## 5. Factory Method — Creación de Hábitos por Categoría
+## 5. Factory Simple — Creación de Mascota Inicial
 
 **Categoría**: Creacional
+
+### Implementación actual
+
+Cuando un usuario se registra, el sistema debe crearle una mascota inicial. Para no dejar esos defaults dentro de `AuthService`, la creación queda centralizada en `PetFactory`.
+
+```java
+@Component
+public class PetFactory {
+
+    public Pet createDefaultFor(User user) {
+        Pet pet = new Pet();
+        pet.setId(UUID.randomUUID().toString());
+        pet.setUser(user);
+        pet.setPetName("Chispa");
+        pet.setPetType("CAT");
+        pet.setState(PetState.NEUTRAL);
+        pet.setXp(0);
+        pet.setLevel(1);
+        return pet;
+    }
+}
+```
+
+Uso en `AuthService`:
+
+```java
+userRepository.save(user);
+petRepository.save(petFactory.createDefaultFor(user));
+```
+
+**Justificación actual**: `AuthService` registra usuarios, pero no necesita conocer todos los defaults internos de una mascota. Si mañana cambia el nombre inicial, tipo o estado, se modifica solo la Factory.
+
+### Referencia planificada
+
+La variante de Factory Method para tipos de hábitos queda como referencia de evolución, no como implementación actual.
 
 ### Problema en HabitPet
 
@@ -764,9 +801,51 @@ public class HabitFactoryRegistry {
 
 ---
 
-## 6. Decorator — Comportamientos Adicionales en Hábitos
+## 6. Decorator — Bonus de XP por Frecuencia
 
 **Categoría**: Estructural
+
+### Implementación actual
+
+En el código actual el Decorator se aplica al cálculo de XP:
+
+- `XpRewardCalculator`: interfaz común.
+- `BaseXpRewardCalculator`: devuelve la XP base de un check-in.
+- `FrequencyBonusXpDecorator`: envuelve al cálculo base y suma un bonus según `weeklyFrequency`.
+
+```java
+@Component
+@Primary
+@RequiredArgsConstructor
+public class FrequencyBonusXpDecorator implements XpRewardCalculator {
+
+    private final BaseXpRewardCalculator delegate;
+
+    @Override
+    public int calculate(Habit habit) {
+        int baseXp = delegate.calculate(habit);
+        if (habit == null) {
+            return baseXp;
+        }
+
+        int frequency = Math.max(1, Math.min(7, habit.getWeeklyFrequency()));
+        int frequencyBonus = (7 - frequency) * 2;
+        return baseXp + frequencyBonus;
+    }
+}
+```
+
+Uso en `PetService`:
+
+```java
+pet.setXp(pet.getXp() + xpRewardCalculator.calculate(completedHabit));
+```
+
+**Justificación actual**: el cálculo base queda estable y el bonus se agrega por composición. Si más adelante se suma bonus por racha o evento especial, puede agregarse otro decorador sin modificar `BaseXpRewardCalculator`.
+
+### Referencia planificada
+
+La variante de decoradores sobre hábitos queda como referencia de evolución, no como implementación actual.
 
 ### Problema en HabitPet
 
@@ -982,12 +1061,14 @@ public class RecordController {
 
 ## Resumen de Patrones Aplicados
 
-| Patrón          | Categoría       | Problema Resuelto en HabitPet                              | Clase Principal            |
-|-----------------|-----------------|-----------------------------------------------------------|---------------------------|
-| Strategy        | Comportamental  | Múltiples algoritmos de cálculo de bienestar intercambiables | `WellnessCalculator`      |
-| Observer        | Comportamental  | Desacoplar el check-in de las reacciones del sistema       | `ApplicationEventPublisher` |
-| State           | Comportamental  | Comportamiento variable por estado de la mascota sin if-else | `PetStateHandler`         |
-| Repository      | Arquitectural   | Desacoplar lógica de negocio del ORM/base de datos         | `PetRepository`           |
-| Factory Method  | Creacional      | Creación de tipos de hábitos extensible sin modificar código | `HabitFactory`            |
-| Decorator       | Estructural     | Composición dinámica de comportamientos de hábitos         | `HabitDecorator`          |
-| Facade          | Estructural     | Simplificar la orquestación del proceso de check-in        | `CheckInFacade`           |
+| Patrón          | Categoría       | Problema Resuelto en HabitPet                              | Clase Principal            | Estado |
+|-----------------|-----------------|-----------------------------------------------------------|----------------------------|--------|
+| Strategy        | Comportamental  | Permitir intercambiar el algoritmo de bienestar             | `WellnessCalculator`, `ExponentialWeightedWellnessCalculator` | Implementado |
+| Observer        | Comportamental  | Desacoplar el check-in de las reacciones del sistema        | `CheckInCompletedEvent`, `ApplicationEventPublisher` | Implementado |
+| Facade          | Estructural     | Centralizar la orquestación de bienestar, mascota y WebSocket | `WellnessService`          | Implementado |
+| Repository      | Arquitectural   | Desacoplar servicios del acceso a datos mediante Spring Data | `UserRepository`, `HabitRepository`, `PetRepository` | Implementado |
+| Factory simple  | Creacional      | Crear la mascota inicial con defaults en un solo lugar      | `PetFactory`               | Implementado |
+| Decorator       | Estructural     | Extender la XP base con bonus por frecuencia sin modificar el cálculo base | `BaseXpRewardCalculator`, `FrequencyBonusXpDecorator` | Implementado |
+| State           | Comportamental  | Estados de mascota como enum                               | `PetState`                 | Versión simple, sin clases por estado |
+| Factory Method para hábitos | Creacional | Creación extensible de tipos de hábitos                    | `HabitFactory`             | Descartado por alcance |
+| Decorator de hábitos | Estructural | Composición dinámica de comportamientos de hábitos         | `HabitDecorator`           | Reemplazado por Decorator de XP |

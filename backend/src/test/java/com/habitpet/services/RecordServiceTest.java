@@ -77,6 +77,7 @@ class RecordServiceTest {
         CheckInCompletedEvent capturedEvent = eventCaptor.getValue();
         assertThat(capturedEvent.userId()).isEqualTo(userId);
         assertThat(capturedEvent.date()).isEqualTo(LocalDate.now());
+        assertThat(capturedEvent.habitId()).isEqualTo(habitId);
     }
 
     @Test
@@ -225,6 +226,7 @@ class RecordServiceTest {
         verify(eventPublisher).publishEvent(eventCaptor.capture());
         CheckInCompletedEvent event = eventCaptor.getValue();
         assertThat(event.date()).isEqualTo(today);
+        assertThat(event.habitId()).isEqualTo(habitId);
     }
 
     @Test

@@ -5,7 +5,9 @@ import com.habitpet.dtos.LoginRequest;
 import com.habitpet.dtos.RegisterRequest;
 import com.habitpet.exceptions.InvalidCredentialsException;
 import com.habitpet.exceptions.ResourceAlreadyExistsException;
+import com.habitpet.models.Pet;
 import com.habitpet.models.User;
+import com.habitpet.repositories.PetRepository;
 import com.habitpet.repositories.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,10 +32,16 @@ class AuthServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private PetRepository petRepository;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     @Mock
     private JwtService jwtService;
+
+    @Mock
+    private PetFactory petFactory;
 
     @InjectMocks
     private AuthService authService;
@@ -50,6 +58,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmail(request.email())).thenReturn(false);
         when(passwordEncoder.encode(anyString())).thenReturn("$2a$10$hashed");
         when(jwtService.generateToken(anyString())).thenReturn("jwt-token");
+        when(petFactory.createDefaultFor(any(User.class))).thenReturn(new Pet());
 
         AuthResponse response = authService.register(request);
 
@@ -59,6 +68,7 @@ class AuthServiceTest {
         assertThat(response.userId()).isNotBlank();
 
         verify(userRepository).save(any(User.class));
+        verify(petRepository).save(any(Pet.class));
         verify(jwtService).generateToken(anyString());
     }
 
@@ -72,6 +82,7 @@ class AuthServiceTest {
                 .isInstanceOf(ResourceAlreadyExistsException.class);
 
         verify(userRepository, never()).save(any(User.class));
+        verify(petRepository, never()).save(any(Pet.class));
     }
 
     @Test
@@ -81,6 +92,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmail(anyString())).thenReturn(false);
         when(passwordEncoder.encode(anyString())).thenReturn("$2a$10$hashed");
         when(jwtService.generateToken(anyString())).thenReturn("jwt-token");
+        when(petFactory.createDefaultFor(any(User.class))).thenReturn(new Pet());
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
 

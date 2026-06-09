@@ -2,11 +2,12 @@
 
 ## 1. Visión General
 
-HabitPet implementa una **arquitectura de capas (Layered Architecture)** en el backend, con módulos organizados siguiendo principios de **Domain-Driven Design (DDD)**. El frontend sigue una **arquitectura de componentes React** con estado centralizado mediante Zustand.
+HabitPet implementa una **arquitectura de capas (Layered Architecture)** en el backend. La documentacion original propone una evolucion hacia modulos DDD por dominio, pero el codigo actual esta organizado por capas tecnicas en `com.habitpet`: `controllers`, `services`, `models`, `repositories`, `dtos`, `exceptions`, `configs`, `websockets`, `events` y `bases/seed`. El frontend sigue una **arquitectura de componentes React** con estado centralizado mediante Zustand.
 
 **Por qué esta combinación:**
 - La arquitectura de capas separa explícitamente las responsabilidades técnicas (presentación, negocio, datos), lo cual facilita la aplicación de SOLID y es ampliamente enseñada en contextos académicos
-- DDD organiza los módulos alrededor del dominio del problema (hábitos, mascota, registros) en lugar de la infraestructura técnica (controllers, services, repositories como módulos transversales), lo que alinea el código con el lenguaje del negocio
+- Los conceptos centrales del dominio siguen visibles en entidades y servicios (`Habit`, `CompletionRecord`, `Pet`, `WellnessScore`, `HabitService`, `RecordService`, `PetService`)
+- La separacion por paquetes de dominio queda como posible refactor posterior; no debe asumirse como estructura implementada
 - Esta combinación permite que cada capa tenga una única razón de cambio (SRP) y que las capas externas dependan de abstracciones, no de implementaciones concretas (DIP)
 
 ---
@@ -42,10 +43,10 @@ flowchart TB
 
     subgraph Frontend["Contenedor: Frontend React (SPA)"]
         direction TB
-        FE_AUTH["Auth Pages\nLogin / Registro"]
+        FE_AUTH["Auth Page\nLogin / Registro"]
         FE_DASH["Dashboard\nMascota + Estado"]
-        FE_HABITS["Habit Manager\nCRUD de hábitos"]
-        FE_STATS["Statistics Page\nEstadísticas semanales"]
+        FE_HABITS["Lista de habitos\nCheck-in diario"]
+        FE_STATS["Statistics Page\nPendiente"]
         FE_STORE["Zustand Store\nEstado global"]
         FE_WS["WebSocket Client
 SockJS+STOMP"]
@@ -53,26 +54,25 @@ SockJS+STOMP"]
 
     subgraph Backend["Contenedor: Backend Spring Boot (API)"]
         direction TB
-        BE_AUTH["AuthModule\nJWT + Guards"]
-        BE_HABITS["HabitModule\nCRUD + validaciones"]
-        BE_RECORDS["RecordModule\nCheck-in diario"]
-        BE_PET["PetModule\nEstado + XP + Niveles"]
-        BE_STATS["StatsModule\nEstadísticas"]
-        BE_WS["WebSocketGateway\nSpring WebSocket (STOMP)"]
-        BE_NOTIF["NotificationModule\nAlertas in-app"]
+        BE_AUTH["Auth\nJWT + JwtAuthFilter"]
+        BE_HABITS["Habits\ncrear, listar, archivar"]
+        BE_RECORDS["Records\nCheck-in diario"]
+        BE_PET["Pet + Wellness\nEstado + XP + Niveles"]
+        BE_STATS["Stats\nPendiente"]
+        BE_WS["PetWebSocketGateway\nSpring WebSocket (STOMP)"]
+        BE_NOTIF["Notifications\nTabla/seed, API pendiente"]
     end
 
     DB[("PostgreSQL\nJPA/Hibernate")]
 
     U --> FE_AUTH & FE_DASH & FE_HABITS & FE_STATS
     FE_AUTH & FE_DASH & FE_HABITS & FE_STATS <--> FE_STORE
-    FE_STORE -- "axios REST" --> BE_AUTH & BE_HABITS & BE_RECORDS & BE_PET & BE_STATS
+    FE_STORE -- "fetch REST" --> BE_AUTH & BE_HABITS & BE_RECORDS & BE_PET
     FE_WS -- "WebSocket" --> BE_WS
     BE_WS --> FE_WS
-    BE_AUTH & BE_HABITS & BE_RECORDS & BE_PET & BE_STATS --> DB
+    BE_AUTH & BE_HABITS & BE_RECORDS & BE_PET & BE_NOTIF --> DB
     BE_RECORDS --> BE_PET
     BE_PET --> BE_WS
-    BE_PET --> BE_NOTIF
 ```
 
 ---
@@ -81,22 +81,21 @@ SockJS+STOMP"]
 
 ```mermaid
 flowchart TB
-    subgraph PresentationLayer["Capa de Presentación"]
-        CTRL_AUTH["AuthController\nPOST /auth/register\nPOST /auth/login\nPOST /auth/refresh"]
-        CTRL_HABIT["HabitController\nCRUD /habits"]
-        CTRL_RECORD["RecordController\nPOST /records/checkin"]
-        CTRL_PET["PetController\nGET /pet/status"]
-        CTRL_STATS["StatsController\nGET /stats/weekly"]
-        WS_GW["WebSocketGateway\neventos: pet:state-changed\npet:level-up\nnotification:alert"]
+    subgraph PresentationLayer["Capa de Presentacion"]
+        CTRL_AUTH["AuthController\nPOST /api/auth/register\nPOST /api/auth/login"]
+        CTRL_HABIT["HabitController\nPOST/GET/PUT/DELETE /api/habits"]
+        CTRL_RECORD["RecordController\nPOST /api/records"]
+        CTRL_PET["PetController\nGET /api/pets/me"]
+        WS_GW["PetWebSocketGateway\n/topic/pet/{userId}"]
     end
 
-    subgraph ApplicationLayer["Capa de Aplicación"]
-        SVC_AUTH["AuthService\nregistrar, login, refreshToken"]
-        SVC_HABIT["HabitService\ncrear, editar, eliminar, listar"]
-        SVC_RECORD["RecordService\ncheckIn, getByDay"]
-        SVC_PET["PetService\nrecalcularEstado, agregarXP"]
-        SVC_STATS["StatsService\nracha, porcentajeSemanal"]
-        SVC_NOTIF["NotificationService\nconsultarYEmitir"]
+    subgraph ApplicationLayer["Capa de Aplicacion"]
+        SVC_AUTH["AuthService\nregister, login"]
+        SVC_HABIT["HabitService\ncrear, listar, archivar"]
+        SVC_RECORD["RecordService\ncheckIn, getRecentRecords"]
+        SVC_WELLNESS["WellnessService\nescucha CheckInCompletedEvent"]
+        SVC_PET["PetService\nupdateWellness, getPetForUser"]
+        SVC_JWT["JwtService\ngenerar y validar JWT"]
     end
 
     subgraph DomainLayer["Capa de Dominio"]
@@ -106,33 +105,32 @@ flowchart TB
         ENT_PET["Pet Entity"]
         VO_WELLNESS["WellnessScore\n(Value Object)"]
         STRAT_WELLNESS["WellnessCalculator\n(Strategy Interface)"]
-        STRAT_WEIGHTED["WeightedAverageStrategy\n(Implementación concreta)"]
-        STATE_PET["PetState\n(State Pattern: CRITICAL, POOR, NEUTRAL, GOOD, EXCELLENT)"]
+        STRAT_WEIGHTED["ExponentialWeightedWellnessCalculator\n(Implementacion concreta)"]
+        STATE_PET["PetState\nCRITICAL, POOR, NEUTRAL, GOOD, EXCELLENT"]
     end
 
     subgraph InfraLayer["Capa de Infraestructura"]
         REPO_USER["UserRepository\n(JPA)"]
         REPO_HABIT["HabitRepository\n(JPA)"]
-        REPO_RECORD["RecordRepository\n(JPA)"]
+        REPO_RECORD["CompletionRecordRepository\n(JPA)"]
         REPO_PET["PetRepository\n(JPA)"]
-        JWT_SVC["JwtFilter
-(Spring Security)"]
-        HASH_SVC["HashService\n(bcrypt)"]
+        REPO_NOTIF["NotificationRepository\n(JPA, pendiente API)"]
+        JWT_FILTER["JwtAuthFilter\n(Spring Security)"]
+        HASH_SVC["PasswordEncoder\n(bcrypt)"]
     end
 
     CTRL_AUTH --> SVC_AUTH
     CTRL_HABIT --> SVC_HABIT
     CTRL_RECORD --> SVC_RECORD
     CTRL_PET --> SVC_PET
-    CTRL_STATS --> SVC_STATS
-    WS_GW --> SVC_NOTIF
 
-    SVC_AUTH --> REPO_USER & JWT_SVC & HASH_SVC
+    SVC_AUTH --> REPO_USER & SVC_JWT & HASH_SVC
     SVC_HABIT --> REPO_HABIT & ENT_HABIT
-    SVC_RECORD --> REPO_RECORD & SVC_PET
-    SVC_PET --> REPO_PET & STRAT_WELLNESS & STATE_PET & VO_WELLNESS
-    SVC_STATS --> REPO_RECORD & REPO_HABIT
-    SVC_NOTIF --> WS_GW
+    SVC_RECORD --> REPO_RECORD & SVC_HABIT
+    SVC_RECORD -. "publica evento" .-> SVC_WELLNESS
+    SVC_WELLNESS --> SVC_HABIT & SVC_RECORD & STRAT_WELLNESS & SVC_PET & WS_GW
+    SVC_PET --> REPO_PET & STATE_PET & VO_WELLNESS
+    JWT_FILTER --> SVC_JWT & REPO_USER
 
     STRAT_WELLNESS <|-- STRAT_WEIGHTED
 ```
@@ -215,24 +213,30 @@ sequenceDiagram
     participant WS as WebSocket Client
     participant RC as RecordController
     participant RS as RecordService
+    participant EV as CheckInCompletedEvent
+    participant WLS as WellnessService
+    participant HS as HabitService
     participant PS as PetService
     participant CALC as WellnessCalculator (Strategy)
     participant DB as PostgreSQL (JPA)
-    participant GW as WebSocketGateway
+    participant GW as PetWebSocketGateway
 
-    FE->>RC: POST /records/checkin { habitId, date }
-    RC->>RS: checkIn(userId, habitId, date)
+    FE->>RC: POST /api/records { habitId }
+    RC->>RS: checkIn(userId, request)
+    RS->>HS: findActiveByOwner(userId, habitId)
     RS->>DB: Verificar que no existe registro previo hoy
     RS->>DB: Crear CompletionRecord
-    RS->>PS: recalcularEstado(userId)
-    PS->>DB: Obtener registros de últimos 7 días
-    PS->>CALC: calcular(registros, hábitos)
-    CALC-->>PS: WellnessScore (0-100)
-    PS->>PS: Determinar PetState (enum)
-    PS->>PS: Calcular XP ganado
+    RS->>EV: publicar evento userId + fecha
+    EV->>WLS: @EventListener onCheckInCompleted
+    WLS->>HS: listActiveHabits(userId)
+    WLS->>RS: getRecentRecords(userId, 7)
+    WLS->>CALC: calculate(habitosActivos, registros, fecha)
+    CALC-->>WLS: WellnessScore (0-100)
+    WLS->>PS: updateWellness(userId, score)
+    PS->>PS: Determinar PetState y sumar XP
     PS->>DB: Actualizar Pet (state, xp, level)
-    PS->>GW: emit('pet:state-changed', { state, xp, level })
-    GW->>WS: broadcast al usuario
+    WLS->>GW: notifyPetUpdate(userId, pet, score)
+    GW->>WS: broadcast /topic/pet/{userId}
     WS->>FE: Actualizar UI de mascota
     RC-->>FE: 201 Created { record }
 ```
@@ -247,18 +251,16 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant JWT as JwtService
 
-    FE->>AC: POST /auth/login { email, password }
+    FE->>AC: POST /api/auth/login { email, password }
     AC->>AS: login(email, password)
     AS->>DB: Buscar usuario por email
     DB-->>AS: User { hashedPassword, ... }
-    AS->>AS: bcrypt.compare(password, hashedPassword)
-    AS->>JWT: sign({ sub: userId, email })
-    JWT-->>AS: accessToken (15min)
-    AS->>JWT: sign({ sub: userId }, { expiresIn: '7d' })
-    JWT-->>AS: refreshToken
-    AS->>DB: Guardar refreshToken hash
-    AS-->>AC: { accessToken, refreshToken, user }
-    AC-->>FE: 200 OK { accessToken, refreshToken, user }
+    AS->>AS: passwordEncoder.matches(password, hashedPassword)
+    AS->>JWT: generateToken(userId)
+    JWT-->>AS: token JWT
+    AS-->>AC: { token, userId, email, displayName }
+    AC-->>FE: 200 OK { token, userId, email, displayName }
+    FE->>FE: Guardar token en localStorage (demo)
 ```
 
 ---
@@ -358,16 +360,24 @@ classDiagram
 
 ### 8.1. Autenticación
 
-- **Mecanismo**: JWT con dos tokens
-  - `accessToken`: expira en 15 minutos, se envía en el header `Authorization: Bearer`
-  - `refreshToken`: expira en 7 días, se envía en cookie HttpOnly (más seguro que localStorage)
-- **Almacenamiento en cliente**: `accessToken` en memoria (Zustand), `refreshToken` en cookie HttpOnly
-- **Por qué HttpOnly para refresh**: El `refreshToken` en localStorage es vulnerable a ataques XSS. Una cookie HttpOnly no es accesible desde JavaScript del navegador.
+**Implementación actual:**
+- **Mecanismo**: JWT stateless con un token firmado por `JwtService`
+- **Transporte**: el frontend envía `Authorization: Bearer <token>` en las llamadas REST protegidas
+- **Persistencia cliente**: el token se guarda en `localStorage` mediante Zustand para simplificar la demo
+- **Expiración actual**: configurable por `jwt.expiration-ms`; hoy queda en 24 horas por `application.yml`
+
+**Objetivo posterior documentado:**
+- Access token corto (15 minutos)
+- Refresh token de 7 días en cookie HttpOnly
+- Access token en memoria, no en `localStorage`
+- Interceptor de cliente para renovar sesión ante 401
+
+La tabla `refresh_tokens` ya existe en el schema, pero el flujo de refresh no está implementado en `AuthController`/`AuthService`.
 
 ### 8.2. Autorización
 
-- **Guard JWT global**: Toda ruta de la API requiere autenticación por defecto (global guard en Spring Boot)
-- **Rutas públicas**: Decorador personalizado `@Public()` para endpoints de login y registro
+- **Filtro JWT global**: Toda ruta de la API requiere autenticación por defecto mediante `JwtAuthFilter`
+- **Rutas públicas**: `/api/auth/**`, Swagger, healthcheck y `/ws/**`
 - **Ownership**: Cada service verifica que el recurso solicitado pertenece al usuario autenticado (`userId` del token vs `userId` del recurso). Un usuario no puede acceder a los hábitos de otro usuario.
 
 ---
@@ -385,7 +395,7 @@ Spring Boot expone un sistema de filtros de excepciones. Se implementa un `HttpE
 
 ### 9.2. Frontend
 
-- Interceptor de axios que maneja el refresh del `accessToken` cuando expira (401)
+- Fetch API en frontend para llamadas REST; no hay interceptor de refresh todavía
 - Componentes de error boundary en React para errores de renderizado
 - Estados de error explícitos en el Zustand store por cada operación
 - Toast notifications para errores de usuario (validación, red)
@@ -394,15 +404,16 @@ Spring Boot expone un sistema de filtros de excepciones. Se implementa un `HttpE
 
 ## 10. Consideraciones de Seguridad
 
-| Vulnerabilidad    | Mitigación Implementada                                                           |
+| Vulnerabilidad    | Mitigación actual / estado                                                        |
 |-------------------|-----------------------------------------------------------------------------------|
-| SQL Injection     | JPA/Hibernate con queries parametrizadas; no se usa SQL raw en el MVP                |
+| SQL Injection     | JPA/Hibernate con repositorios Spring Data; no se usa SQL raw en servicios         |
 | XSS               | React escapa valores por defecto; no se usa `dangerouslySetInnerHTML`             |
-| CSRF              | La cookie de refresh token usa `SameSite=Strict`; los endpoints de mutación requieren JWT |
-| Brute Force       | Rate limiting en endpoints de autenticación (Spring Boot `spring-boot-starter-security`)          |
-| Contraseñas       | bcrypt con 10 rounds; nunca se almacena la contraseña en texto plano              |
-| Exposición de datos | Los endpoints de consulta verifican ownership (userId del JWT == userId del recurso) |
-| Tokens inseguros  | `accessToken` en memoria, nunca en localStorage; `refreshToken` en HttpOnly cookie |
+| CSRF              | API stateless con JWT por header; cookie HttpOnly para refresh queda pendiente     |
+| Brute Force       | Pendiente: no hay rate limiting especifico en endpoints de autenticacion           |
+| Contraseñas       | bcrypt; nunca se almacena la contraseña en texto plano                            |
+| Exposición de datos | Los services validan ownership con `userId` del JWT antes de operar recursos     |
+| Tokens inseguros  | Pendiente: para demo el token vive en `localStorage`; objetivo posterior: access token en memoria y refresh HttpOnly |
+| WebSocket         | Topic publico por usuario para demo; objetivo posterior: autenticar STOMP CONNECT y usar destinos por usuario |
 
 ---
 
@@ -415,6 +426,6 @@ Todas las decisiones de arquitectura tienen su ADR correspondiente en `docs/ADR/
 | Framework backend           | Spring Boot                    | ADR-002          |
 | Framework frontend          | React + TypeScript        | ADR-001          |
 | Base de datos               | PostgreSQL                | ADR-003          |
-| Estilo de arquitectura      | Layered + módulos DDD     | ADR-004          |
+| Estilo de arquitectura      | Layered actual; DDD packages como evolucion posible | ADR-004          |
 | Motor de estado de mascota  | Strategy Pattern          | ADR-005          |
 | Tiempo real                 | Spring WebSocket STOMP     | ADR-006          |

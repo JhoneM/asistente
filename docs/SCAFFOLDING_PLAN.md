@@ -62,7 +62,7 @@ frontend/
 │   ├── hooks/               useAuth, usePet, useWebSocket
 │   ├── store/               Zustand stores (auth, pet, habit)
 │   ├── services/
-│   │   ├── api/             Clientes REST (axios)
+│   │   ├── api/             Clientes REST (fetch actual; axios disponible)
 │   │   └── websocket/       Cliente STOMP/SockJS
 │   ├── types/               TypeScript types/DTOs
 │   ├── utils/               Helpers (fechas, formato)
@@ -85,7 +85,9 @@ frontend/
 
 ### 2.3. Backend (`backend/`)
 
-Paquetes organizados por dominio según ADR-004 (Layered Architecture + DDD packages).
+Estructura propuesta originalmente: paquetes organizados por dominio según ADR-004 (Layered Architecture + DDD packages).
+
+> Estado actual: el backend implementado usa paquetes por capa en `com.habitpet` (`controllers`, `services`, `models`, `repositories`, `dtos`, `exceptions`, `configs`, `websockets`, `events`, `bases/seed`). Esta seccion queda como referencia historica del scaffolding planificado, no como mapa exacto del codigo actual.
 
 ```
 backend/
@@ -299,7 +301,7 @@ Java 21, Spring Boot 3.3+.
 Dependencias mínimas:
 - `react`, `react-dom`, `react-router-dom`
 - `zustand` (estado global)
-- `axios` (HTTP client)
+- `axios` disponible como dependencia; el frontend actual usa `fetch` en los clientes REST
 - `@stomp/stompjs`, `sockjs-client` (WebSocket)
 - `tailwindcss`, `postcss`, `autoprefixer`
 - DevDeps: `vite`, `@vitejs/plugin-react`, `typescript`, `@types/react`, `@types/react-dom`, `@types/sockjs-client`, `eslint`, `prettier`, `vitest`
@@ -603,8 +605,8 @@ Cada uno con hábitos, registros e historial precargado.
 Para resetear: `make reset` (borra volumen y vuelve a poblar).
 
 ## Estructura
-Backend organizado por dominio (DDD packages): auth, habit, record, pet, stats, notification, websocket, shared.
-Cada paquete contiene: controller, service, domain, repository, dto.
+Backend actual organizado por capas en `com.habitpet`: `controllers`, `services`, `models`, `repositories`, `dtos`, `exceptions`, `configs`, `websockets`, `events` y `bases/seed`.
+La documentacion propone una evolucion hacia paquetes DDD por dominio (`auth`, `habit`, `record`, `pet`, `stats`, `notification`, `websocket`, `shared`), pero esa no es la estructura implementada hoy. No asumir paquetes por dominio al codear.
 
 ## Convenciones
 - Idioma de comentarios y commits: español
@@ -625,13 +627,20 @@ Cada paquete contiene: controller, service, domain, repository, dto.
 - docs/SCAFFOLDING_PLAN.md — Este documento
 
 ## Estado del proyecto
-- [x] Documentación completa
-- [ ] Scaffolding inicial
-- [ ] Implementación auth module
-- [ ] Implementación habit module
-- [ ] Implementación record + pet modules
-- [ ] WebSocket en tiempo real
-- [ ] Frontend completo
+- [x] Documentacion academica completa
+- [x] Scaffolding inicial frontend/backend/Docker
+- [x] Migraciones Flyway y datos de prueba
+- [x] Auth backend/frontend: registro y login con JWT stateless
+- [x] Factory simple: se crea mascota inicial al registrar usuario
+- [x] Habit backend/frontend: crear, listar, editar y archivar habitos
+- [x] Record + pet backend: check-in diario, recalculo de bienestar, XP y niveles
+- [x] Decorator simple: bonus de XP segun frecuencia semanal del habito
+- [x] WebSocket backend/frontend para actualizacion de mascota
+- [x] Tests unitarios backend existentes
+- [x] Encoding de archivos revisado: contenido UTF-8 correcto; si PowerShell muestra mojibake, es salida de consola
+- [~] Frontend demo: login/registro, dashboard, mascota, gestion de habitos y check-in
+- [ ] Refresh token real y cookies HttpOnly
+- [ ] Estadisticas, rachas y notificaciones conectadas a API/UI
 
 ## Decisiones críticas
 - DB: PostgreSQL (no MySQL) → ver ADR-003

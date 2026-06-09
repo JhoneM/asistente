@@ -48,12 +48,34 @@ public class WellnessService {
 
         List<Habit> activeHabits = habitService.listActiveHabits(userId);
         List<CompletionRecord> recentRecords = recordService.getRecentRecords(userId, WELLNESS_WINDOW_DAYS);
+        Habit completedHabit = findCompletedHabit(activeHabits, event.habitId());
 
         WellnessScore score = wellnessCalculator.calculate(activeHabits, recentRecords, event.date());
-        Pet updatedPet = petService.updateWellness(userId, score);
+        Pet updatedPet = petService.updateWellness(userId, score, completedHabit);
         petWebSocketGateway.notifyPetUpdate(userId, updatedPet, score);
 
         log.warn("Wellness recalculated: userId={}, score={}, state={}, level={}",
                 userId, String.format("%.1f", score.value()), updatedPet.getState(), updatedPet.getLevel());
+    }
+
+    public WellnessScore calculateCurrentScore(String userId) {
+        List<Habit> activeHabits = habitService.listActiveHabits(userId);
+        List<CompletionRecord> recentRecords = recordService.getRecentRecords(userId, WELLNESS_WINDOW_DAYS);
+        return wellnessCalculator.calculate(activeHabits, recentRecords, java.time.LocalDate.now());
+    }
+
+    private Habit findCompletedHabit(List<Habit> activeHabits, String habitId) {
+        if (activeHabits.isEmpty()) {
+            return null;
+        }
+
+        if (habitId == null) {
+            return activeHabits.get(0);
+        }
+
+        return activeHabits.stream()
+                .filter(habit -> habitId.equals(habit.getId()))
+                .findFirst()
+                .orElse(activeHabits.get(0));
     }
 }
